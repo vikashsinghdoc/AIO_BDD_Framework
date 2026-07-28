@@ -1,0 +1,15 @@
+pageTitle:
+  strategy: css
+  value: ".category-page .page-title h1"
+productGrid:
+  strategy: css
+  value: ".product-grid"
+computingAndInternet:
+  strategy: css
+  value: "a[href='/computing-and-internet']"
+sortBy:
+  strategy: css
+  value: "#products-orderby"
+pageSize:
+  strategy: css
+  value: "#products-pagesize"

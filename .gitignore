@@ -1,0 +1,22 @@
+# Backend
+backend/target/
+backend/build/
+backend/.mvn/
+*.class
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Engine
+engine/node_modules/
+engine/reports/
+engine/test-results/
+engine/.auth/
+engine/.env
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.log

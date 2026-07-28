@@ -1,0 +1,15 @@
+email:
+  strategy: css
+  value: "#Email"
+password:
+  strategy: css
+  value: "#Password"
+submit:
+  strategy: css
+  value: "input.login-button"
+pageTitle:
+  strategy: css
+  value: ".login-page .page-title h1"
+rememberMe:
+  strategy: css
+  value: "#RememberMe"

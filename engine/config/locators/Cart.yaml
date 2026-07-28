@@ -1,0 +1,9 @@
+pageTitle:
+  strategy: css
+  value: ".shopping-cart-page .page-title h1"
+emptyCartMessage:
+  strategy: css
+  value: ".shopping-cart-page .no-data"
+checkoutButton:
+  strategy: css
+  value: "input.checkout-button"

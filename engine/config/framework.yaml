@@ -1,0 +1,28 @@
+browser:
+  name: ${BROWSER}
+  timeoutMs: 30000
+  screenshot: ${SCREENSHOT}
+  video: ${VIDEO}
+  trace: ${TRACE}
+  headless: ${HEADLESS}
+
+baseUrl: ${BASE_URL}
+apiBaseUrl: ${API_BASE_URL}
+
+auth:
+  ui:
+    loginPath: /login
+    usernameLocator: Login.email
+    passwordLocator: Login.password
+    submitLocator: Login.submit
+    authenticatedLocator: Common.userMenu
+  roles:
+    admin:
+      usernameEnv: ADMIN_USERNAME
+      passwordEnv: ADMIN_PASSWORD
+      bearerTokenEnv: ADMIN_BEARER_TOKEN
+      apiKeyEnv: ADMIN_API_KEY
+    member:
+      usernameEnv: MEMBER_USERNAME
+      passwordEnv: MEMBER_PASSWORD
+      bearerTokenEnv: MEMBER_BEARER_TOKEN

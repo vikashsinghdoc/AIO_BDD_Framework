@@ -1,0 +1,24 @@
+pageTitle:
+  strategy: css
+  value: ".register-page .page-title h1"
+maleGender:
+  strategy: css
+  value: "#gender-male"
+firstName:
+  strategy: css
+  value: "#FirstName"
+lastName:
+  strategy: css
+  value: "#LastName"
+email:
+  strategy: css
+  value: "#Email"
+password:
+  strategy: css
+  value: "#Password"
+confirmPassword:
+  strategy: css
+  value: "#ConfirmPassword"
+submit:
+  strategy: css
+  value: "#register-button"

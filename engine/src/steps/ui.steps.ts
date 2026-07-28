@@ -1,0 +1,27 @@
+import { Given, When, Then } from "@cucumber/cucumber";
+import { expect } from "@playwright/test";
+import { resolveLocator } from "../support/locator-registry.js";
+import { config } from "../support/config.js";
+import { authenticateUi, reuseOrAuthenticateUi } from "../support/auth.js";
+import { interpolate } from "../support/variables.js";
+import { runLoggedStep } from "../support/logger.js";
+import type { TestWorld } from "../support/world.js";
+
+Given("I navigate to {string}", async function (this: TestWorld, path: string) { await runLoggedStep(this, `Navigate to ${path}`, () => this.page.goto(interpolate(this, path))); });
+Given("I am authenticated as {string}", async function (this: TestWorld, role: string) { await runLoggedStep(this, `Reuse UI authentication as ${role}`, () => reuseOrAuthenticateUi(this, role)); });
+Given("I sign in as {string}", async function (this: TestWorld, role: string) { await runLoggedStep(this, `Sign in as ${role}`, () => authenticateUi(this, role)); });
+When("I click {string}", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Click ${alias}`, () => resolveLocator(this.page, alias).click()); });
+When("I dismiss a modal using {string}", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Dismiss modal using ${alias}`, () => resolveLocator(this.page, alias).click()); });
+When("I fill {string} with {string}", async function (this: TestWorld, alias: string, value: string) { await runLoggedStep(this, `Fill ${alias}`, () => resolveLocator(this.page, alias).fill(interpolate(this, value))); });
+When("I select {string} in {string}", async function (this: TestWorld, value: string, alias: string) { await runLoggedStep(this, `Select option in ${alias}`, () => resolveLocator(this.page, alias).selectOption(interpolate(this, value))); });
+When("I upload {string} to {string}", async function (this: TestWorld, file: string, alias: string) { await runLoggedStep(this, `Upload file to ${alias}`, () => resolveLocator(this.page, alias).setInputFiles(file)); });
+When("I press {string} on {string}", async function (this: TestWorld, key: string, alias: string) { await runLoggedStep(this, `Press ${key} on ${alias}`, () => resolveLocator(this.page, alias).press(key)); });
+When("I wait for {string}", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Wait for ${alias}`, () => resolveLocator(this.page, alias).waitFor()); });
+Then("{string} should be visible", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Assert ${alias} is visible`, () => expect(resolveLocator(this.page, alias)).toBeVisible()); });
+Then("{string} should be hidden", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Assert ${alias} is hidden`, () => expect(resolveLocator(this.page, alias)).toBeHidden()); });
+Then("{string} should have text {string}", async function (this: TestWorld, alias: string, text: string) { await runLoggedStep(this, `Assert ${alias} has expected text`, () => expect(resolveLocator(this.page, alias)).toHaveText(interpolate(this, text))); });
+Then("{string} should have value {string}", async function (this: TestWorld, alias: string, value: string) { await runLoggedStep(this, `Assert ${alias} has expected value`, () => expect(resolveLocator(this.page, alias)).toHaveValue(interpolate(this, value))); });
+Then("{string} should be enabled", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Assert ${alias} is enabled`, () => expect(resolveLocator(this.page, alias)).toBeEnabled()); });
+Then("{string} should be disabled", async function (this: TestWorld, alias: string) { await runLoggedStep(this, `Assert ${alias} is disabled`, () => expect(resolveLocator(this.page, alias)).toBeDisabled()); });
+Then("the URL should contain {string}", async function (this: TestWorld, value: string) { await runLoggedStep(this, `Assert URL contains ${value}`, () => expect(this.page).toHaveURL(new RegExp(interpolate(this, value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))); });
+Then("{string} should have count {int}", async function (this: TestWorld, alias: string, count: number) { await runLoggedStep(this, `Assert ${alias} has count ${count}`, () => expect(resolveLocator(this.page, alias)).toHaveCount(count)); });

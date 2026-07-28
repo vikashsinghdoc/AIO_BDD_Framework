@@ -1,0 +1,7 @@
+userMenu:
+  strategy: testId
+  value: user-menu
+navigation:
+  strategy: role
+  role: navigation
+  name: Main navigation

@@ -1,0 +1,30 @@
+{
+  "name": "playwright-cucumber-reusable-framework",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber-js --config cucumber.cjs",
+    "test:ui": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber-js --config cucumber.cjs --tags '@ui'",
+    "test:api": "tsx ./node_modules/@cucumber/cucumber/bin/cucumber-js --config cucumber.cjs --tags '@api'",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf reports test-results .auth"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.3.0",
+    "@types/node": "^22.15.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3"
+  },
+  "overrides": {
+    "glob": "^13.0.6",
+    "uuid": "^11.0.5"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.54.0",
+    "dotenv": "^16.5.0",
+    "winston": "^3.19.0",
+    "yaml": "^2.8.0"
+  }
+}

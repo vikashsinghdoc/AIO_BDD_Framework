@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: test-orchestrator
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:test_platform}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+# --- Test engine orchestration settings -------------------------------------
+engine:
+  # Absolute or relative (to the backend working directory) path to the
+  # playwright-cucumber engine project (the "engine" folder in this repo).
+  working-directory: ${ENGINE_DIR:../engine}
+  # Command used to invoke the suite. Split on spaces; kept configurable so
+  # Windows/npx setups can override it without a code change.
+  command: ${ENGINE_COMMAND:npm test --}
+  # Directory (relative to working-directory) where per-run report folders
+  # are created, e.g. reports/run-42/cucumber.json
+  reports-subdirectory: reports
+  # Hard ceiling so a hung browser can't run forever.
+  timeout-minutes: ${ENGINE_TIMEOUT_MINUTES:30}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+logging:
+  level:
+    com.testplatform: INFO

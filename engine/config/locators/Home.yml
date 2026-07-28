@@ -1,0 +1,27 @@
+registerLink:
+  strategy: css
+  value: "a.ico-register"
+
+loginLink:
+  strategy: css
+  value: "a.ico-login"
+
+searchBox:
+  strategy: css
+  value: "#small-searchterms"
+
+searchButton:
+  strategy: css
+  value: "input[value='Search']"
+
+welcomeMessage:
+  strategy: css
+  value: ".topic-block-body"
+
+booksCategoryLink:
+  strategy: css
+  value: ".top-menu a[href='/books']"
+
+cartLink:
+  strategy: css
+  value: "a.ico-cart"
