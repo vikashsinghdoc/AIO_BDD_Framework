@@ -2,6 +2,7 @@
 backend/target/
 backend/build/
 backend/.mvn/
+backend/.gradle
 *.class
 
 # Frontend
