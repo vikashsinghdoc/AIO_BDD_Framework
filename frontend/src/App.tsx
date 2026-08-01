@@ -3,11 +3,13 @@ import Dashboard from "./pages/Dashboard";
 import RunTest from "./pages/RunTest";
 import History from "./pages/History";
 import RunDetailPage from "./pages/RunDetail";
+import StepsExplorer from "./pages/StepsExplorer";
 
 const navItems = [
   { to: "/", label: "Mission Control", icon: RadarIcon, end: true },
   { to: "/run", label: "Run Tests", icon: BoltIcon },
-  { to: "/history", label: "History", icon: ClockIcon }
+  { to: "/history", label: "History", icon: ClockIcon },
+  { to: "/explorer", label: "Steps Explorer", icon: GridIcon }
 ];
 
 export default function App() {
@@ -44,6 +46,17 @@ export default function App() {
               {item.label}
             </NavLink>
           ))}
+
+          <a
+            href="http://localhost:3000"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium text-ink-muted hover:text-ink-primary hover:bg-base-surface2 transition-colors"
+          >
+            <GrafanaIcon className="w-[17px] h-[17px]" />
+            Grafana
+            <span className="ml-auto text-[10px] text-ink-faint">↗</span>
+          </a>
         </nav>
 
         <div className="mt-auto px-4 py-5">
@@ -63,6 +76,7 @@ export default function App() {
           <Route path="/run" element={<RunTest />} />
           <Route path="/history" element={<History />} />
           <Route path="/runs/:id" element={<RunDetailPage />} />
+          <Route path="/explorer" element={<StepsExplorer />} />
         </Routes>
       </main>
     </div>
@@ -90,6 +104,24 @@ function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3.5 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function GridIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+function GrafanaIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M12 3 L20 7.5 V16.5 L12 21 L4 16.5 V7.5 Z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }

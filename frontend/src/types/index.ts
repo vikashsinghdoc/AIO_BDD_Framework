@@ -91,3 +91,39 @@ export interface PageResponse<T> {
   number: number;
   size: number;
 }
+
+export interface StepDetailRow {
+  id: number;
+  runId: number;
+  runStatus: RunStatus;
+  runTagExpression: string | null;
+  runBrowser: string;
+  runStartedAt: string;
+  featureName: string | null;
+  scenarioId: number;
+  scenarioName: string;
+  scenarioStatus: ExecutionStatus;
+  scenarioTags: string[];
+  attachmentCount: number;
+  stepOrder: number;
+  stepKeyword: string;
+  stepName: string;
+  stepStatus: ExecutionStatus;
+  stepDurationMs: number | null;
+  stepErrorMessage: string | null;
+}
+
+export interface StepExplorerFilters {
+  runId?: number;
+  runStatus?: RunStatus;
+  scenarioStatus?: ExecutionStatus;
+  stepStatus?: ExecutionStatus;
+  feature?: string;
+  scenario?: string;
+  step?: string;
+  tag?: string;
+  browser?: string;
+  onlyErrors?: boolean;
+  page?: number;
+  size?: number;
+}

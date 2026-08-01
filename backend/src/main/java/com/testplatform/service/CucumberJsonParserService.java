@@ -3,6 +3,7 @@ package com.testplatform.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.testplatform.domain.*;
+import com.testplatform.security.AttachmentCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,11 @@ public class CucumberJsonParserService {
 
     private static final Logger log = LoggerFactory.getLogger(CucumberJsonParserService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final AttachmentCipher attachmentCipher;
+
+    public CucumberJsonParserService(AttachmentCipher attachmentCipher) {
+        this.attachmentCipher = attachmentCipher;
+    }
 
     public static class ParseResult {
         public final List<FeatureResult> features = new ArrayList<>();
@@ -102,7 +108,7 @@ public class CucumberJsonParserService {
                                 attachment.setScenario(scenario);
                                 attachment.setStepKeyword(step.getKeyword());
                                 attachment.setMimeType(mimeType);
-                                attachment.setData(Base64.getDecoder().decode(data));
+                                attachment.setData(attachmentCipher.encrypt(Base64.getDecoder().decode(data)));
                                 scenario.getAttachments().add(attachment);
                             } catch (IllegalArgumentException ex) {
                                 log.warn("Could not decode embedding for scenario '{}': {}", scenario.getName(), ex.getMessage());

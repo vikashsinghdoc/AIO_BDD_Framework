@@ -1,10 +1,13 @@
 import type {
+  AttachmentDto,
   DashboardStats,
   PageResponse,
   RunDetail,
   RunRequest,
   RunStatus,
-  RunSummary
+  RunSummary,
+  StepDetailRow,
+  StepExplorerFilters
 } from "../types";
 
 const BASE = "/api";
@@ -60,6 +63,26 @@ export const api = {
   getTags: () => request<string[]>("/tags"),
 
   getDashboard: () => request<DashboardStats>("/dashboard/summary"),
+
+  searchSteps: (filters: StepExplorerFilters) => {
+    const search = new URLSearchParams();
+    if (filters.runId != null) search.set("runId", String(filters.runId));
+    if (filters.runStatus) search.set("runStatus", filters.runStatus);
+    if (filters.scenarioStatus) search.set("scenarioStatus", filters.scenarioStatus);
+    if (filters.stepStatus) search.set("stepStatus", filters.stepStatus);
+    if (filters.feature) search.set("feature", filters.feature);
+    if (filters.scenario) search.set("scenario", filters.scenario);
+    if (filters.step) search.set("step", filters.step);
+    if (filters.tag) search.set("tag", filters.tag);
+    if (filters.browser) search.set("browser", filters.browser);
+    if (filters.onlyErrors) search.set("onlyErrors", "true");
+    search.set("page", String(filters.page ?? 0));
+    search.set("size", String(filters.size ?? 25));
+    return request<PageResponse<StepDetailRow>>(`/steps?${search.toString()}`);
+  },
+
+  getScenarioAttachments: (scenarioId: number) =>
+    request<AttachmentDto[]>(`/scenarios/${scenarioId}/attachments`),
 
   attachmentUrl: (id: number) => `${BASE}/attachments/${id}`,
 

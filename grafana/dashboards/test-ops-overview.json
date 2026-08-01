@@ -1,0 +1,159 @@
+{
+  "id": null,
+  "uid": "test-ops-overview",
+  "title": "Test Ops Overview",
+  "tags": ["test-ops", "playwright", "cucumber"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-30d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Pass rate (selected range)",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 70 },
+              { "color": "green", "value": 90 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT ROUND(100.0 * SUM(passed_scenarios) / NULLIF(SUM(total_scenarios), 0), 2) AS \"Pass rate\" FROM test_run WHERE started_at BETWEEN $__timeFrom() AND $__timeTo() AND finished_at IS NOT NULL",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total runs",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) AS \"Runs\" FROM test_run WHERE started_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Failed scenarios",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT COALESCE(SUM(failed_scenarios), 0) AS \"Failed\" FROM test_run WHERE started_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Avg run duration",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(duration_ms)) AS \"Avg duration\" FROM test_run WHERE started_at BETWEEN $__timeFrom() AND $__timeTo() AND finished_at IS NOT NULL",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Pass rate over time",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] },
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT day AS time, pass_rate_pct AS \"Pass rate\" FROM v_run_daily_stats WHERE day BETWEEN $__timeFrom() AND $__timeTo() ORDER BY day",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Run volume (pass / fail / skip)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT day AS time, passed_scenarios AS \"Passed\", failed_scenarios AS \"Failed\", skipped_scenarios AS \"Skipped\" FROM v_run_daily_stats WHERE day BETWEEN $__timeFrom() AND $__timeTo() ORDER BY day",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "barchart",
+      "title": "Failures by tag",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT tag, SUM(failed_count) AS failures FROM v_tag_failure_stats WHERE day BETWEEN $__timeFrom() AND $__timeTo() AND tag IS NOT NULL GROUP BY tag ORDER BY failures DESC LIMIT 15",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "barchart",
+      "title": "Step failure hotspots (by step keyword)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT step_keyword, SUM(failed_count) AS failures FROM v_step_failure_stats WHERE day BETWEEN $__timeFrom() AND $__timeTo() GROUP BY step_keyword ORDER BY failures DESC LIMIT 15",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Recent failed scenarios",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 23 },
+      "datasource": { "type": "postgres", "uid": "TestOpsPostgres" },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT run_id AS \"Run\", feature_name AS \"Feature\", scenario_name AS \"Scenario\", scenario_tags AS \"Tags\", run_started_at AS \"Started\", scenario_duration_ms AS \"Duration (ms)\", left(scenario_error_message, 200) AS \"Error\" FROM v_scenario_detail WHERE scenario_status = 'FAILED' AND run_started_at BETWEEN $__timeFrom() AND $__timeTo() ORDER BY run_started_at DESC LIMIT 100",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
