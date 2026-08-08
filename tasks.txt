@@ -1,0 +1,21 @@
+Here's the real order:
+
+1. Point the framework at your org's actual app (not the demo site)
+- Build out config/locators/*.yaml for your real application's pages (currently only has demo-site locators)
+- Fill in real .env.<name> files (DEV/QA/UAT/PROD) with your actual URLs
+- Set up real auth roles/credentials in framework.yaml + .env
+
+2. Close remaining capability gaps — only if your testcases actually need them
+- dbQuery/dbPollUntil — needed if any testcase does DB assertions (most of graphite's reconciliation/swift suites do)
+- CDP-attach — needed only if UAT/PROD sits behind SSO your engine can't script through
+
+3. Decide the secrets strategy
+- Graphite's global-values.yml uses Jasypt-encrypted values. Either build Jasypt-compatible decryption to reuse them, or re-issue everything as plain values in this engine's own .env (simpler, but someone has to actually do that re-issuing)
+
+4. Wire it into your org's infra
+- Real Postgres (not local dev), Docker/deployment setup, Grafana pointed at it
+- A Jenkins stage that actually invokes this instead of (or alongside) graphite's runner — graphite's own CI never called server.js directly, it went through the Java Spring service, so you're replacing that call, not just adding a parallel one
+
+5. Update scriptor.md so the Copilot agent writes Gherkin + locator YAML against this vocabulary instead of graphite's YAML — this is the actual mechanism that keeps "agents stay compatible" true. Skipping it means the agent keeps generating YAML nobody runs anymore.
+
+6. Then onboard the 87 testcases — manually, feature-by-feature, using whatever's built by that point.

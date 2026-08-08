@@ -751,6 +751,10 @@ to whatever origin served it.
   source of runtime configuration truth.
 - `engine/config/locators/*.yaml` — the locator registry; adding UI coverage for a new
   page usually means adding a file here, not new TypeScript.
+- `.claude/skills/onboard-cucumber-test/SKILL.md` — invoked as `/onboard-cucumber-test`;
+  converts one `graphite-observer-suite` YAML testcase (a separate, unrelated project —
+  see session history) into a draft `.feature` file + locator YAML for manual review.
+  Never writes files itself without explicit confirmation — see the skill for why.
 - `frontend/src/api/client.ts` + `frontend/src/types/index.ts` — the entire
   frontend/backend contract surface, hand-maintained on both sides.
 - `README.md` (repo root) — genuinely accurate and thorough as of this writing; treat
