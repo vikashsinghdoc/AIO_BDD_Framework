@@ -363,7 +363,18 @@ grafana/
   doc comment: "intentionally defensive... because the report is produced by an external
   Node process") — missing fields, absent embeddings, and malformed JSON are handled by
   returning empty/default results, not by throwing. Preserve this defensiveness in any
-  change to this parser.
+  change to this parser. It is also the **source of truth for soft-assert step status**:
+  a `Then` step run via `runLoggedAssertion` never throws (see engine Logging above), so
+  Cucumber's own JSON always reports it as `passed` even when the assertion failed —
+  `findSoftFailureLine()` scans the step's `text/plain` embedding for the exact
+  `] ERROR FAIL ` marker that wrapper writes, and if present, overrides `StepResult`
+  to `FAILED` with that line as the error message, regardless of what Cucumber said. It
+  also filters out Cucumber's synthetic `Before`/`After` hook entries (`name == null`)
+  from persisted `StepResult` rows the same way `ScenarioCatalogService` already did —
+  their status still counts toward the scenario's overall worst-status, they're just not
+  shown as a step row (this used to be a known gap here specifically; fixed alongside
+  the soft-assert change since the new aggregated After-hook failure would otherwise
+  have made the blank row much more common).
 - `LogBroadcastService` keeps an in-memory rolling text buffer per run id so a client that
   connects to the SSE stream mid-run still sees everything emitted so far. Buffers/emitter
   lists are cleared when the run completes.
@@ -385,8 +396,33 @@ read `engine/README.md` for its own (thorough) documentation. Key architectural 
 **it is designed so that writing a new test is (ideally) just a new `.feature` file plus
 new locator YAML — not new step definitions.** The reusable DSL in `src/steps/*.steps.ts`
 is intentionally small and generic (`I click "X"`, `I fill "X" with "Y"`, `"X" should be
-visible`, etc.). Adding a bespoke step definition for something the DSL can already
-express is against this design — check `ui.steps.ts`/`api.steps.ts` first.
+visible`, `I hover over "X"`, `I double-click "X"`, `I go back`, `I clear cookies`,
+`I take a screenshot`, `I store the text of "X" as "Y"`, `I generate a UUID as "X"`,
+`I load file "X" as "Y"`, `I wait for "X" to be "<attached|detached|visible|hidden>"`,
+`"X" should not contain "Y"`, `the numeric value of "X" should have changed by N from
+"Y"`, `"X" should not have duplicate values`, `I open/use/close a new browser context
+as "X"`, `I click "X" and expect a download`, `I wait for any of:` (DataTable of
+aliases), `I wait for the text of "X" to change from "Y"`, `I retry up to N times
+widening "X" and clicking "Y" until "Z" is visible`, `I skip the remaining steps if
+"X" contains "Y"`, `I stop the scenario if "X" is not found`, `I fetch an OAuth2 token
+as "X":` (DataTable of tokenUrl/clientId/clientSecret/grantType), etc.). Adding a
+bespoke step definition for something the DSL can already express is against this
+design — check `ui.steps.ts`/`api.steps.ts` first. This vocabulary was deliberately
+grown to close gaps against a separate, unrelated project's YAML test framework
+(`graphite-observer-ai`) as prep for a future *manual* migration of that project's
+testcases to Cucumber — not an automated translator, and not code in this repo; see the
+git history/session notes for that project's own action catalog if extending this list
+further. **Deliberately not built in this pass** (explicit scope cut, not an oversight):
+`dbQuery`/`dbPollUntil` (needs a real Oracle client and instance to build against and
+verify — no way to do that safely in this environment; revisit once real DB connection
+details exist) and a CDP-attach browser mode for SSO-gated environments (revisit once a
+specific target environment is confirmed to need it — see Playwright section below).
+`I skip the remaining steps if...`/`I stop the scenario if...` both work by returning
+the literal string `"pending"` from the step function — a real, documented
+`@cucumber/cucumber` convention (`step_runner.js`) that marks that one step PENDING
+rather than PASSED/FAILED; Cucumber's own runner already treats any non-PASSED status as
+a reason to skip a scenario's remaining steps, so this halts cleanly (shown as a
+"Pending" warning, not a failure) without needing the soft-assert machinery at all.
 
 - **Environment registry** (`engine/.env.<name>` — `.env.dev`, `.env.qa`, `.env.uat`,
   `.env.staging`, `.env.prod`): part of the engine's own core framework config, sitting
@@ -410,12 +446,25 @@ express is against this design — check `ui.steps.ts`/`api.steps.ts` first.
   resilient tests over `css`/`xpath`.
 - **World** (`world.ts`): per-scenario Cucumber World carrying `browser`, `context`,
   `page`, `api` (Playwright `APIRequestContext`), a `variables` Map for cross-step data,
-  and `requestHeaders`/`requestQuery` for API steps.
+  `requestHeaders`/`requestQuery` for API steps, and `softFailures`/`namedContexts`/
+  `defaultContext` (see below). `this.context`/`this.page` always point at whichever
+  browser context is currently "active" — `openContext`/`useContext`/`closeContext`
+  (see Development Conventions → DSL vocabulary) mutate these two fields directly on
+  switch rather than requiring every other step to resolve "the active context"
+  indirectly, so the rest of the DSL (`ui.steps.ts`) needed zero changes to support
+  multiple contexts per scenario. `namedContexts` holds any additional contexts opened
+  via `openContext`; `defaultContext` lazily stashes the original scenario
+  context/page the first time a scenario switches away from it, so `I use context
+  "default"` can switch back.
 - **Hooks** (`hooks.ts`): `BeforeAll` launches exactly one browser per Cucumber worker;
   `Before` creates a fresh, isolated `BrowserContext`+`Page` per scenario; `After` decides
   whether to keep the screenshot/video/trace based on the run's mode and whether the
   scenario failed, then closes the context; `AfterAll` closes the browser. This is the
-  isolation boundary that makes parallel workers safe.
+  isolation boundary that makes parallel workers safe. `After` also closes any leftover
+  `namedContexts`/stashed `defaultContext` best-effort (no artifact capture for those —
+  only whichever context is active when the scenario ends gets a screenshot/trace/video),
+  and — see Architectural Decisions — throws an aggregated error if `softFailures` is
+  non-empty, since that's what actually fails a scenario that used soft-assert.
 - **Auth** (`auth.ts`): UI auth signs in once per role per worker and caches Playwright
   `storageState` to `.auth/worker-<n>/<role>.json`; subsequent scenarios reuse it via
   `reuseOrAuthenticateUi` (which discards the pristine pre-auth context/video and swaps in
@@ -425,12 +474,15 @@ express is against this design — check `ui.steps.ts`/`api.steps.ts` first.
   placeholders, and validates/normalizes `browser.name` (falls back to `chromium`),
   `headless`, and the `screenshot`/`video`/`trace` mode enums — throws on invalid values
   rather than silently defaulting.
-- **Logging** (`logger.ts`): every DSL step is wrapped by `runLoggedStep`, which writes a
-  START/PASS/FAIL+duration line via winston (colored console + JSON file per worker under
-  `test-results/worker-<n>/logs/`) and **also attaches that same text as a `text/plain`
-  Cucumber attachment on the step** — meaning every step of every scenario, not just
-  failures, produces a Postgres `attachment` row after ingestion. Credentials/tokens are
-  deliberately never logged.
+- **Logging** (`logger.ts`): every `Given`/`When` step is wrapped by `runLoggedStep`,
+  which writes a START/PASS/FAIL+duration line via winston (colored console + JSON file
+  per worker under `test-results/worker-<n>/logs/`) and **also attaches that same text
+  as a `text/plain` Cucumber attachment on the step** — meaning every step of every
+  scenario, not just failures, produces a Postgres `attachment` row after ingestion.
+  Credentials/tokens are deliberately never logged. Every `Then` (assertion) step is
+  wrapped by `runLoggedAssertion` instead — see "Soft-assert execution model" under
+  Architectural Decisions for why these are two different functions with different
+  failure behavior.
 
 ---
 
@@ -936,6 +988,50 @@ This was a real bug, caught only by actually triggering a multi-worker run and r
 the rendered output — re-anchoring this regex "for correctness" would silently break
 worker-badging on every failure line again.
 
+**Soft-assert execution model for `Then` (assertion) steps — engine-wide, `Given`/`When`
+unaffected.**
+What: every `Then` step runs via `logger.ts`'s `runLoggedAssertion` instead of
+`runLoggedStep`. On failure it logs/attaches `FAIL ...` exactly like before but does
+**not** throw — it pushes the failure onto `world.softFailures` (`TestWorld`) and
+returns, so Cucumber keeps invoking the scenario's remaining steps instead of skipping
+them. `hooks.ts`'s `After` hook throws one aggregated error at the very end (after all
+existing screenshot/trace/video capture, which now also treats `softFailures.length > 0`
+as "failed" for on-failure artifact modes) if any were recorded, which is what actually
+flips the scenario to FAILED — nothing else will, since no step itself threw.
+`Given`/`When` (action) steps are untouched — `runLoggedStep` still throws and still
+halts the scenario immediately on a broken click/fill/navigate/etc.
+Why: requested explicitly, scoped down from "all failures are soft" to assertion-only
+after discussing the risk of continuing past a broken *action* into steps that assume
+it succeeded — soft-asserted steps are read-only checks, so they can't leave the page in
+a state that makes a later step meaningless the way a failed click could.
+**The real design constraint, worth remembering before touching this again**:
+Cucumber.js's own `TestCaseRunner` derives a step's status purely from whether it threw,
+and once a step throws it does not invoke the scenario's remaining steps — this is
+internal runtime behavior with no supported override. So "keep running every `Then`
+step past a failure" and "have Cucumber's own JSON mark that step FAILED" are mutually
+exclusive if you rely on Cucumber's native status alone. The resolution moves the
+source of truth for step status to the backend instead of Cucumber's JSON — see
+`CucumberJsonParserService`'s `findSoftFailureLine()` under Backend above, which
+overrides a step's status to FAILED if its `text/plain` attachment contains the
+`] ERROR FAIL ` marker `runLoggedAssertion` writes, regardless of what Cucumber
+reported. Verified live end-to-end (not just by reading the code): a scratch scenario
+with 3 of 4 `Then` steps intentionally failing showed all 4 steps executing, Cucumber's
+own JSON reporting all 4 as `passed`, and `GET /api/runs/{id}` correctly showing the 3
+that failed as `FAILED` with real error messages and the scenario as `FAILED` overall —
+while a separate scratch scenario with a broken `When` step confirmed action failures
+still skip the remaining steps exactly as before.
+Depends on it: `CucumberJsonParserService`'s embedding-scan override is coupled to the
+exact log-line format `writeLog`/`runLoggedAssertion` produce — if that format changes,
+`findSoftFailureLine()`'s `] ERROR FAIL ` marker needs updating too, or soft-failed
+steps silently stop showing as failed in the UI (they'd still fail the *scenario*
+correctly via the After-hook throw, just without per-step detail).
+Do not change casually: this applies to every scenario in the repo today, not opt-in
+via a tag — an existing scenario with multiple sequential `Then` steps where an earlier
+one fails now runs all of them instead of skipping the rest, which is an intentional,
+explicit choice, not an oversight. Don't extend soft-assert to `Given`/`When` steps
+without re-deriving whether that's safe for the specific action — the read-only-checks
+reasoning above doesn't hold for state-mutating steps.
+
 ---
 
 # AI Development Operating Rules
@@ -1197,17 +1293,6 @@ stakes.
   dependency** (`package.json` `devDependencies` has no `eslint` entry) — `npm run lint`
   fails with `command not found`. Discovered the same way. `npm run build` (`tsc -b` +
   Vite) is the working type-safety check in the meantime.
-- **`CucumberJsonParserService` persists Cucumber's synthetic `Before`/`After` hook
-  entries as real `StepResult` rows** (keyword `"Before"`/`"After"`, `name` null) —
-  confirmed via a live run's `GET /api/steps` output, not just theoretical. This means
-  `ScenarioGrid`'s expanded step list and the Steps Explorer grid both show a
-  blank-text step row at the start/end of every scenario today. Pre-existing, unrelated
-  to this session's changes (the same JSON shape issue was independently found and
-  fixed for the *new* `ScenarioCatalogService`, which filters these out — see Test
-  Engine — but `CucumberJsonParserService` itself was intentionally left alone, out of
-  scope for this task). Worth fixing later by applying the same `name != null` filter
-  there.
-
 A full repo grep found no `TODO`/`FIXME`/`HACK`/`XXX` markers anywhere in application
 source, so there is no in-code trail of acknowledged bugs to list here. The README's own
 "Notes on what's intentionally out of scope for v1" section (auth, multi-run concurrency,

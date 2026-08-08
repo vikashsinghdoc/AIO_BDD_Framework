@@ -57,3 +57,32 @@ export async function runLoggedStep<T>(
     throw error;
   }
 }
+
+// Used only by `Then` (assertion) steps. Unlike runLoggedStep, a failure here is
+// never re-thrown into Cucumber's runner — it's recorded on world.softFailures so the
+// scenario keeps executing its remaining steps instead of Cucumber skipping them, and
+// hooks.ts's After hook fails the scenario overall once all steps have run. Cucumber's
+// own per-step status therefore always reads "passed" for a soft-failed step; the
+// backend recovers the real status from this same FAIL log line in the step's
+// text/plain attachment (see CucumberJsonParserService).
+export async function runLoggedAssertion(
+  world: TestWorld,
+  description: string,
+  action: () => Promise<unknown> | unknown
+): Promise<void> {
+  const scenario = world.scenarioName ?? "scenario";
+  const entries = [writeLog("info", scenario, `START ${description}`)];
+  const startedAt = performance.now();
+
+  try {
+    await action();
+    entries.push(writeLog("info", scenario, `PASS ${description} (${Math.round(performance.now() - startedAt)}ms)`));
+    await world.attach(entries.join("\n"), "text/plain");
+  } catch (error) {
+    const message = error instanceof Error ? error.message.split("\n")[0] : String(error);
+    const failMessage = `FAIL ${description} (${Math.round(performance.now() - startedAt)}ms): ${message}`;
+    entries.push(writeLog("error", scenario, failMessage));
+    await world.attach(entries.join("\n"), "text/plain");
+    world.softFailures.push(failMessage);
+  }
+}
