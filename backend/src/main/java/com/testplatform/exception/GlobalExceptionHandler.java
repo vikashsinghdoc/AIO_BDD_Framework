@@ -22,6 +22,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    @ExceptionHandler(EnvironmentResolutionException.class)
+    public ResponseEntity<Map<String, Object>> handleEnvironmentResolution(EnvironmentResolutionException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(VisualDebugValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleVisualDebugValidation(VisualDebugValidationException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", ex.getMessage());
+        return ResponseEntity.badRequest().body(body);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         Map<String, Object> body = new LinkedHashMap<>();

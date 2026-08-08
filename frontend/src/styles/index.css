@@ -9,9 +9,14 @@
 
   body {
     @apply bg-base-bg text-ink-primary font-body antialiased;
+    /* One restrained glow (not two competing blobs) plus a barely-there technical
+       grid — texture, not decoration. Keeps the "futuristic" read without the page
+       fighting for attention against the content sitting on top of it. */
     background-image:
-      radial-gradient(circle at 15% 0%, rgba(124,92,255,0.10), transparent 45%),
-      radial-gradient(circle at 85% 20%, rgba(45,212,191,0.06), transparent 40%);
+      radial-gradient(circle at 20% -10%, rgba(124,92,255,0.08), transparent 42%),
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: auto, 48px 48px, 48px 48px;
     background-attachment: fixed;
   }
 
@@ -33,18 +38,29 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* Ships with the animations that use it, not as a follow-up: keep transitions
+     that aid comprehension (color/opacity), drop movement and position changes. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-base-surface/80 border border-base-border rounded-2xl backdrop-blur-sm;
+    @apply bg-base-surface/75 border border-base-border rounded-2xl backdrop-blur-sm;
   }
 
   .console-scanlines {
     background-image: repeating-linear-gradient(
       to bottom,
-      rgba(255,255,255,0.015) 0px,
-      rgba(255,255,255,0.015) 1px,
+      rgba(255,255,255,0.008) 0px,
+      rgba(255,255,255,0.008) 1px,
       transparent 1px,
       transparent 3px
     );

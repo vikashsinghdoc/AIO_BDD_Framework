@@ -23,7 +23,7 @@ export function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-base-surface2 border border-base-border rounded-lg px-3.5 py-2.5 text-[13px] text-ink-primary outline-none focus:border-signal-brand/60 appearance-none cursor-pointer"
+      className="w-full bg-base-surface2 border border-base-border rounded-lg px-3.5 py-2.5 text-[13px] text-ink-primary outline-none focus:border-signal-brand/60 transition-colors duration-150 ease-out-strong appearance-none cursor-pointer"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -42,17 +42,17 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
       className="flex items-center gap-3 group"
     >
       <span
-        className={`relative w-10 h-[22px] rounded-full transition-colors ${
+        className={`relative w-10 h-[22px] rounded-full shrink-0 transition-colors duration-150 ${
           checked ? "bg-signal-brand" : "bg-base-surface2 border border-base-border"
         }`}
       >
         <span
-          className={`absolute top-[3px] w-4 h-4 rounded-full bg-white transition-transform ${
-            checked ? "translate-x-[21px]" : "translate-x-[3px]"
+          className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white transition-transform duration-150 ease-out-strong ${
+            checked ? "translate-x-[18px]" : "translate-x-0"
           }`}
         />
       </span>
-      <span className="text-[13px] text-ink-primary group-hover:text-white">{label}</span>
+      <span className="text-[13px] text-ink-primary group-hover:text-white transition-colors duration-150">{label}</span>
     </button>
   );
 }
@@ -65,7 +65,7 @@ export function NumberInput({ value, onChange, min = 1, max = 16 }: { value: num
       min={min}
       max={max}
       onChange={(e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || min)))}
-      className="w-full bg-base-surface2 border border-base-border rounded-lg px-3.5 py-2.5 text-[13px] text-ink-primary outline-none focus:border-signal-brand/60"
+      className="w-full bg-base-surface2 border border-base-border rounded-lg px-3.5 py-2.5 text-[13px] text-ink-primary outline-none focus:border-signal-brand/60 transition-colors duration-150 ease-out-strong"
     />
   );
 }
@@ -77,7 +77,7 @@ export function TextInput({ value, onChange, placeholder }: { value: string; onC
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-base-surface2 border border-base-border rounded-lg px-3.5 py-2.5 text-[13px] font-mono text-ink-primary placeholder:text-ink-faint outline-none focus:border-signal-brand/60"
+      className="w-full bg-base-surface2 border border-base-border rounded-lg px-3.5 py-2.5 text-[13px] font-mono text-ink-primary placeholder:text-ink-faint outline-none focus:border-signal-brand/60 transition-colors duration-150 ease-out-strong"
     />
   );
 }

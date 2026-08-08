@@ -1,4 +1,4 @@
-# Test Ops Console
+# TestGenie — AI-Powered Test Automation & Intelligence
 
 A one-stop shop for the Playwright + Cucumber BDD engine: trigger runs from a web UI, watch
 a live Jenkins-style console while they execute, and browse every past run — scenario grid,

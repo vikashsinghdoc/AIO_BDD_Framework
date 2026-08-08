@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { ScenarioDto } from "../types";
 import { StepStatusBadge } from "./StatusBadge";
 import { api } from "../api/client";
@@ -19,9 +20,18 @@ function formatMs(ms: number | null) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export default function ScenarioGrid({ scenarios }: { scenarios: ScenarioDto[] }) {
+export default function ScenarioGrid({ scenarios, environment }: { scenarios: ScenarioDto[]; environment?: string }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const navigate = useNavigate();
+
+  function debugScenario(scenario: ScenarioDto, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!scenario.featureUri || scenario.line == null) return;
+    const params = new URLSearchParams({ mode: "visual-debug", uri: scenario.featureUri, line: String(scenario.line) });
+    if (environment) params.set("env", environment);
+    navigate(`/run?${params.toString()}`);
+  }
 
   if (scenarios.length === 0) {
     return (
@@ -47,7 +57,18 @@ export default function ScenarioGrid({ scenarios }: { scenarios: ScenarioDto[] }
                   <p className="text-[11px] font-mono text-ink-faint truncate">{scenario.featureName}</p>
                   <p className="text-[14px] font-medium text-ink-primary mt-0.5 leading-snug">{scenario.name}</p>
                 </div>
-                <StepStatusBadge status={scenario.status} />
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <StepStatusBadge status={scenario.status} />
+                  {scenario.featureUri && scenario.line != null && (
+                    <button
+                      type="button"
+                      onClick={(e) => debugScenario(scenario, e)}
+                      className="text-[10.5px] font-mono text-signal-brand2 hover:text-white transition-colors duration-150 ease-out-strong"
+                    >
+                      debug →
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-[11.5px] font-mono text-ink-faint">

@@ -92,6 +92,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-4 min-w-0">
                     <span className="font-mono text-[12px] text-ink-faint w-10">#{run.id}</span>
                     <StatusBadge status={run.status} pulse />
+                    <span className="text-[11px] font-mono text-signal-brand2 shrink-0">{run.environment}</span>
                     <span className="text-[13px] text-ink-primary truncate max-w-[280px]">
                       {run.tagExpression ?? "all scenarios"}
                     </span>

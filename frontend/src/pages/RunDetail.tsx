@@ -5,6 +5,7 @@ import type { RunDetail } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
 import ScenarioGrid from "../components/ScenarioGrid";
 import LogConsole from "../components/LogConsole";
+import MiniStat from "../components/MiniStat";
 import { Select, TextInput } from "../components/FormControls";
 import { format } from "date-fns";
 
@@ -60,7 +61,7 @@ export default function RunDetailPage() {
           <StatusBadge status={summary.status} pulse />
         </div>
         <p className="text-ink-muted text-[13px] mt-1.5 font-mono">
-          {summary.tagExpression ?? "all scenarios"} · {summary.browser} · {summary.headless ? "headless" : "headed"} · {summary.parallelWorkers} worker(s)
+          {summary.environment} · {summary.tagExpression ?? "all scenarios"} · {summary.browser} · {summary.headless ? "headless" : "headed"} · {summary.parallelWorkers} worker(s)
           {" · "}
           {format(new Date(summary.startedAt), "MMM d, yyyy HH:mm:ss")}
         </p>
@@ -103,23 +104,13 @@ export default function RunDetailPage() {
               <TextInput value={search} onChange={setSearch} placeholder="search scenario name…" />
             </div>
           </div>
-          <ScenarioGrid scenarios={detail.scenarios} />
+          <ScenarioGrid scenarios={detail.scenarios} environment={summary.environment} />
         </>
       ) : (
         <div className="h-[600px]">
           <LogConsole runId={summary.id} live={isLive} staticLog={detail.consoleLog} />
         </div>
       )}
-    </div>
-  );
-}
-
-function MiniStat({ label, value, accent }: { label: string; value: string | number; accent?: "pass" | "fail" | "pending" }) {
-  const color = accent === "pass" ? "text-signal-pass" : accent === "fail" ? "text-signal-fail" : accent === "pending" ? "text-signal-pending" : "text-ink-primary";
-  return (
-    <div className="glass-panel px-4 py-3">
-      <p className="eyebrow">{label}</p>
-      <p className={`font-display text-[20px] font-semibold mt-1 ${color}`}>{value}</p>
     </div>
   );
 }
