@@ -47,9 +47,9 @@ export default function TagPicker({
                 type="button"
                 key={tag}
                 onClick={() => toggle(tag)}
-                className={`px-3 py-1.5 rounded-full text-[12px] font-mono border transition-all ${
+                className={`px-3 py-1.5 rounded-full text-[12px] font-mono border transition-colors duration-150 ease-out-strong ${
                   active
-                    ? "bg-signal-brand/15 border-signal-brand/50 text-white shadow-glow"
+                    ? "bg-signal-brand border-signal-brand text-white"
                     : "border-base-border text-ink-muted hover:border-ink-faint hover:text-ink-primary"
                 }`}
               >

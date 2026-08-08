@@ -1,5 +1,6 @@
 package com.testplatform.dto;
 
+import com.testplatform.domain.ExecutionMode;
 import com.testplatform.domain.RunStatus;
 import com.testplatform.domain.TestRun;
 
@@ -8,7 +9,11 @@ import java.time.Instant;
 public record RunSummaryDto(
         Long id,
         RunStatus status,
+        ExecutionMode executionMode,
+        String environment,
         String tagExpression,
+        String scenarioUri,
+        Integer scenarioLine,
         String browser,
         boolean headless,
         int parallelWorkers,
@@ -25,7 +30,11 @@ public record RunSummaryDto(
         return new RunSummaryDto(
                 run.getId(),
                 run.getStatus(),
+                run.getExecutionMode(),
+                run.getEnvironment(),
                 run.getTagExpression(),
+                run.getScenarioUri(),
+                run.getScenarioLine(),
                 run.getBrowser(),
                 run.isHeadless(),
                 run.getParallelWorkers(),

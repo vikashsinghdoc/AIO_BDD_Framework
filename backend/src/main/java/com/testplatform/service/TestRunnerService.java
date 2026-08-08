@@ -1,9 +1,13 @@
 package com.testplatform.service;
 
 import com.testplatform.config.EngineProperties;
+import com.testplatform.domain.ExecutionMode;
 import com.testplatform.domain.RunStatus;
 import com.testplatform.domain.TestRun;
 import com.testplatform.dto.RunRequest;
+import com.testplatform.dto.ScenarioCatalogEntryDto;
+import com.testplatform.dto.VisualDebugRequest;
+import com.testplatform.exception.VisualDebugValidationException;
 import com.testplatform.repository.TestRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,9 +41,14 @@ public class TestRunnerService {
     private final CucumberJsonParserService parserService;
     private final LogBroadcastService logBroadcastService;
     private final EngineProperties engineProperties;
+    private final EnvironmentConfigService environmentConfigService;
+    private final ScenarioCatalogService scenarioCatalogService;
 
     // Runs execute one-at-a-time against the single engine checkout, so a
-    // single-threaded queue keeps things simple and avoids report collisions.
+    // single-threaded queue keeps things simple and avoids report collisions. Visual
+    // Debug runs share this same queue — they're still "one engine process at a time,"
+    // just with a different Cucumber target and forced single-scenario/single-worker
+    // settings, not a separate execution lane.
     private final ExecutorService runQueue = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "cucumber-run-queue");
         t.setDaemon(true);
@@ -52,17 +62,28 @@ public class TestRunnerService {
                               CucumberJsonParserService parserService,
                               LogBroadcastService logBroadcastService,
                               EngineProperties engineProperties,
+                              EnvironmentConfigService environmentConfigService,
+                              ScenarioCatalogService scenarioCatalogService,
                               PlatformTransactionManager transactionManager) {
         this.testRunRepository = testRunRepository;
         this.parserService = parserService;
         this.logBroadcastService = logBroadcastService;
         this.engineProperties = engineProperties;
+        this.environmentConfigService = environmentConfigService;
+        this.scenarioCatalogService = scenarioCatalogService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     public TestRun enqueue(RunRequest request) {
+        // Resolve before creating any DB row: an unknown/unconfigured environment
+        // should fail fast (400) rather than leave a QUEUED run that can never succeed.
+        EnvironmentConfigService.ResolvedEnvironment resolvedEnvironment =
+                environmentConfigService.resolve(request.getEnvironment());
+
         TestRun run = new TestRun();
+        run.setExecutionMode(ExecutionMode.STANDARD);
         run.setStatus(RunStatus.QUEUED);
+        run.setEnvironment(request.getEnvironment());
         run.setTagExpression(blankToNull(request.getTagExpression()));
         run.setBrowser(request.getBrowser());
         run.setHeadless(request.isHeadless());
@@ -70,14 +91,67 @@ public class TestRunnerService {
         run.setScreenshotMode(request.getScreenshotMode());
         run.setVideoMode(request.getVideoMode());
         run.setTraceMode(request.getTraceMode());
-        run.setBaseUrl(blankToNull(request.getBaseUrl()));
-        run.setApiBaseUrl(blankToNull(request.getApiBaseUrl()));
+        run.setBaseUrl(resolvedEnvironment.baseUrl());
+        run.setApiBaseUrl(resolvedEnvironment.apiBaseUrl());
         run.setTriggeredBy(request.getTriggeredBy());
         run.setStartedAt(Instant.now());
         run = testRunRepository.save(run);
 
         Long runId = run.getId();
-        runQueue.submit(() -> executeRun(runId, request));
+        runQueue.submit(() -> executeRun(runId));
+        return run;
+    }
+
+    /**
+     * Visual Debug: exactly one scenario, one browser session, no parallel workers.
+     * Validated against the live scenario catalog — not just the frontend picker —
+     * before any TestRun row or process is created, so this can't be bypassed by
+     * calling the API directly. See VisualDebugRequest for why scenarioLine is
+     * nullable and what that means for matching.
+     */
+    public TestRun enqueueVisualDebug(VisualDebugRequest request) {
+        EnvironmentConfigService.ResolvedEnvironment resolvedEnvironment =
+                environmentConfigService.resolve(request.getEnvironment());
+
+        List<ScenarioCatalogEntryDto> matches = scenarioCatalogService.listScenarios().stream()
+                .filter(s -> Objects.equals(s.uri(), request.getScenarioUri()))
+                .filter(s -> request.getScenarioLine() == null || Objects.equals(s.line(), request.getScenarioLine()))
+                .toList();
+
+        if (matches.isEmpty()) {
+            throw new VisualDebugValidationException(
+                    "That scenario could not be found. It may have been renamed, moved, or removed — refresh and select again.");
+        }
+        if (matches.size() > 1) {
+            throw new VisualDebugValidationException(
+                    "Visual Debug supports one scenario at a time. Your selection matches multiple scenarios. "
+                            + "Please select a single scenario to continue.");
+        }
+
+        ScenarioCatalogEntryDto scenario = matches.get(0);
+
+        TestRun run = new TestRun();
+        run.setExecutionMode(ExecutionMode.VISUAL_DEBUG);
+        run.setStatus(RunStatus.QUEUED);
+        run.setEnvironment(request.getEnvironment());
+        run.setScenarioUri(scenario.uri());
+        run.setScenarioLine(scenario.line());
+        // Forced, not user-choosable: Visual Debug is defined as one scenario, one
+        // chromium session, no parallelism — see plan/CLAUDE.md Architectural Decisions.
+        run.setBrowser("chromium");
+        run.setHeadless(true);
+        run.setParallelWorkers(1);
+        run.setScreenshotMode("only-on-failure");
+        run.setVideoMode("off");
+        run.setTraceMode("off");
+        run.setBaseUrl(resolvedEnvironment.baseUrl());
+        run.setApiBaseUrl(resolvedEnvironment.apiBaseUrl());
+        run.setTriggeredBy(request.getTriggeredBy());
+        run.setStartedAt(Instant.now());
+        run = testRunRepository.save(run);
+
+        Long runId = run.getId();
+        runQueue.submit(() -> executeRun(runId));
         return run;
     }
 
@@ -89,7 +163,7 @@ public class TestRunnerService {
         return true;
     }
 
-    private void executeRun(Long runId, RunRequest request) {
+    private void executeRun(Long runId) {
         TestRun run = testRunRepository.findById(runId).orElse(null);
         if (run == null) return;
 
@@ -105,7 +179,7 @@ public class TestRunnerService {
         boolean timedOut = false;
 
         try {
-            ProcessBuilder builder = buildProcess(request, reportDir);
+            ProcessBuilder builder = buildProcess(run, reportDir);
             logBroadcastService.publish(runId, "$ " + String.join(" ", builder.command()));
             builder.redirectErrorStream(true);
             Process process = builder.start();
@@ -179,29 +253,33 @@ public class TestRunnerService {
         });
     }
 
-    private ProcessBuilder buildProcess(RunRequest request, String reportDir) {
+    private ProcessBuilder buildProcess(TestRun run, String reportDir) {
         List<String> command = new ArrayList<>(List.of(engineProperties.getCommand().split("\\s+")));
-        if (request.getTagExpression() != null && !request.getTagExpression().isBlank()) {
+        if (run.getExecutionMode() != ExecutionMode.VISUAL_DEBUG
+                && run.getTagExpression() != null && !run.getTagExpression().isBlank()) {
             command.add("--tags");
-            command.add(request.getTagExpression());
+            command.add(run.getTagExpression());
         }
 
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(new File(engineProperties.getWorkingDirectory()));
 
         Map<String, String> env = builder.environment();
-        env.put("HEADLESS", String.valueOf(request.isHeadless()));
-        env.put("BROWSER", request.getBrowser());
-        env.put("SCREENSHOT", request.getScreenshotMode());
-        env.put("VIDEO", request.getVideoMode());
-        env.put("TRACE", request.getTraceMode());
-        env.put("PARALLEL_WORKERS", String.valueOf(Math.max(1, request.getParallelWorkers())));
+        env.put("HEADLESS", String.valueOf(run.isHeadless()));
+        env.put("BROWSER", run.getBrowser());
+        env.put("SCREENSHOT", run.getScreenshotMode());
+        env.put("VIDEO", run.getVideoMode());
+        env.put("TRACE", run.getTraceMode());
+        env.put("PARALLEL_WORKERS", String.valueOf(Math.max(1, run.getParallelWorkers())));
         env.put("REPORT_DIR", reportDir);
-        if (request.getBaseUrl() != null && !request.getBaseUrl().isBlank()) {
-            env.put("BASE_URL", request.getBaseUrl());
-        }
-        if (request.getApiBaseUrl() != null && !request.getApiBaseUrl().isBlank()) {
-            env.put("API_BASE_URL", request.getApiBaseUrl());
+        env.put("BASE_URL", run.getBaseUrl());
+        env.put("API_BASE_URL", run.getApiBaseUrl());
+        if (run.getExecutionMode() == ExecutionMode.VISUAL_DEBUG) {
+            // A CLI positional path argument is NOT sufficient to restrict Cucumber to
+            // one scenario here — cucumber.cjs's own `paths` (features/**/*.feature)
+            // still applies alongside it, so the whole suite would run. CUCUMBER_TARGET
+            // overrides `paths` itself instead — see cucumber.cjs for why.
+            env.put("CUCUMBER_TARGET", run.getScenarioUri() + ":" + run.getScenarioLine());
         }
         return builder;
     }

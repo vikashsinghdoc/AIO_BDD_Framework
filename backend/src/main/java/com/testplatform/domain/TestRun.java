@@ -15,6 +15,17 @@ public class TestRun {
 
     private String triggeredBy;
 
+    /** Named environment (DEV/QA/UAT/...) this run targeted — see EnvironmentConfigService. */
+    private String environment;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ExecutionMode executionMode = ExecutionMode.STANDARD;
+
+    /** Populated only for VISUAL_DEBUG runs — the exact scenario targeted. */
+    private String scenarioUri;
+    private Integer scenarioLine;
+
     @Enumerated(EnumType.STRING)
     private RunStatus status;
 
@@ -60,6 +71,18 @@ public class TestRun {
 
     public String getTriggeredBy() { return triggeredBy; }
     public void setTriggeredBy(String triggeredBy) { this.triggeredBy = triggeredBy; }
+
+    public String getEnvironment() { return environment; }
+    public void setEnvironment(String environment) { this.environment = environment; }
+
+    public ExecutionMode getExecutionMode() { return executionMode; }
+    public void setExecutionMode(ExecutionMode executionMode) { this.executionMode = executionMode; }
+
+    public String getScenarioUri() { return scenarioUri; }
+    public void setScenarioUri(String scenarioUri) { this.scenarioUri = scenarioUri; }
+
+    public Integer getScenarioLine() { return scenarioLine; }
+    public void setScenarioLine(Integer scenarioLine) { this.scenarioLine = scenarioLine; }
 
     public RunStatus getStatus() { return status; }
     public void setStatus(RunStatus status) { this.status = status; }

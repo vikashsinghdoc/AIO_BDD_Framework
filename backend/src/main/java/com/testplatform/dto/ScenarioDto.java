@@ -8,7 +8,9 @@ import java.util.List;
 public record ScenarioDto(
         Long id,
         String featureName,
+        String featureUri,
         String name,
+        Integer line,
         ExecutionStatus status,
         Long durationMs,
         String errorMessage,
@@ -23,7 +25,9 @@ public record ScenarioDto(
         return new ScenarioDto(
                 s.getId(),
                 s.getFeature() != null ? s.getFeature().getName() : null,
+                s.getFeature() != null ? s.getFeature().getUri() : null,
                 s.getName(),
+                s.getLine(),
                 s.getStatus(),
                 s.getDurationMs(),
                 s.getErrorMessage(),

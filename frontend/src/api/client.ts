@@ -1,13 +1,16 @@
 import type {
   AttachmentDto,
   DashboardStats,
+  EnvironmentSummary,
   PageResponse,
   RunDetail,
   RunRequest,
   RunStatus,
   RunSummary,
+  ScenarioCatalogEntry,
   StepDetailRow,
-  StepExplorerFilters
+  StepExplorerFilters,
+  VisualDebugRequest
 } from "../types";
 
 const BASE = "/api";
@@ -35,6 +38,9 @@ export const api = {
   triggerRun: (payload: RunRequest) =>
     request<RunSummary>("/runs", { method: "POST", body: JSON.stringify(payload) }),
 
+  triggerVisualDebug: (payload: VisualDebugRequest) =>
+    request<RunSummary>("/visual-debug", { method: "POST", body: JSON.stringify(payload) }),
+
   cancelRun: (id: number) => request<void>(`/runs/${id}/cancel`, { method: "POST" }),
 
   listRuns: (params: {
@@ -61,6 +67,10 @@ export const api = {
   },
 
   getTags: () => request<string[]>("/tags"),
+
+  getEnvironments: () => request<EnvironmentSummary[]>("/environments"),
+
+  getScenarioCatalog: () => request<ScenarioCatalogEntry[]>("/scenarios"),
 
   getDashboard: () => request<DashboardStats>("/dashboard/summary"),
 

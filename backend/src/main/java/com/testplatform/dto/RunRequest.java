@@ -1,10 +1,15 @@
 package com.testplatform.dto;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 /** Payload the UI submits to trigger a new run. */
 public class RunRequest {
+
+    /** Named environment (DEV/QA/UAT/...) — resolved server-side, see EnvironmentConfigService. */
+    @NotBlank(message = "environment is required")
+    private String environment;
 
     /** Cucumber tag expression, e.g. "@ui and not @wip". Blank = run everything. */
     private String tagExpression;
@@ -26,9 +31,10 @@ public class RunRequest {
     @Pattern(regexp = "off|on|retain-on-failure")
     private String traceMode = "off";
 
-    private String baseUrl;
-    private String apiBaseUrl;
     private String triggeredBy = "web-ui";
+
+    public String getEnvironment() { return environment; }
+    public void setEnvironment(String environment) { this.environment = environment; }
 
     public String getTagExpression() { return tagExpression; }
     public void setTagExpression(String tagExpression) { this.tagExpression = tagExpression; }
@@ -50,12 +56,6 @@ public class RunRequest {
 
     public String getTraceMode() { return traceMode; }
     public void setTraceMode(String traceMode) { this.traceMode = traceMode; }
-
-    public String getBaseUrl() { return baseUrl; }
-    public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
-
-    public String getApiBaseUrl() { return apiBaseUrl; }
-    public void setApiBaseUrl(String apiBaseUrl) { this.apiBaseUrl = apiBaseUrl; }
 
     public String getTriggeredBy() { return triggeredBy; }
     public void setTriggeredBy(String triggeredBy) { this.triggeredBy = triggeredBy; }

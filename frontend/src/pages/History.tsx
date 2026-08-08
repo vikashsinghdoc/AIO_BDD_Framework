@@ -67,6 +67,7 @@ export default function History() {
             <tr className="border-b border-base-border text-left">
               <th className="px-5 py-3 eyebrow font-normal">Run</th>
               <th className="px-5 py-3 eyebrow font-normal">Status</th>
+              <th className="px-5 py-3 eyebrow font-normal">Environment</th>
               <th className="px-5 py-3 eyebrow font-normal">Tags</th>
               <th className="px-5 py-3 eyebrow font-normal">Browser</th>
               <th className="px-5 py-3 eyebrow font-normal">Results</th>
@@ -83,6 +84,7 @@ export default function History() {
                   </Link>
                 </td>
                 <td className="px-5 py-3.5"><StatusBadge status={run.status} /></td>
+                <td className="px-5 py-3.5 font-mono text-signal-brand2 text-[12px]">{run.environment}</td>
                 <td className="px-5 py-3.5 font-mono text-ink-muted text-[12px]">{run.tagExpression ?? "all"}</td>
                 <td className="px-5 py-3.5 text-ink-muted capitalize">{run.browser}</td>
                 <td className="px-5 py-3.5 font-mono text-[12px]">
@@ -100,7 +102,7 @@ export default function History() {
             ))}
             {!loading && runs.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-ink-faint">No runs match these filters.</td>
+                <td colSpan={8} className="px-5 py-10 text-center text-ink-faint">No runs match these filters.</td>
               </tr>
             )}
           </tbody>

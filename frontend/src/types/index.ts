@@ -1,5 +1,7 @@
 export type RunStatus = "QUEUED" | "RUNNING" | "PASSED" | "FAILED" | "ERRORED" | "CANCELLED";
 
+export type ExecutionMode = "STANDARD" | "VISUAL_DEBUG";
+
 export type ExecutionStatus =
   | "PASSED"
   | "FAILED"
@@ -9,10 +11,19 @@ export type ExecutionStatus =
   | "AMBIGUOUS"
   | "UNKNOWN";
 
+export interface EnvironmentSummary {
+  name: string;
+  label: string;
+}
+
 export interface RunSummary {
   id: number;
   status: RunStatus;
+  executionMode: ExecutionMode;
+  environment: string;
   tagExpression: string | null;
+  scenarioUri: string | null;
+  scenarioLine: number | null;
   browser: string;
   headless: boolean;
   parallelWorkers: number;
@@ -44,7 +55,9 @@ export interface AttachmentDto {
 export interface ScenarioDto {
   id: number;
   featureName: string | null;
+  featureUri: string | null;
   name: string;
+  line: number | null;
   status: ExecutionStatus;
   durationMs: number | null;
   errorMessage: string | null;
@@ -72,6 +85,7 @@ export interface DashboardStats {
 }
 
 export interface RunRequest {
+  environment: string;
   tagExpression: string;
   browser: "chromium" | "firefox" | "webkit";
   headless: boolean;
@@ -79,8 +93,26 @@ export interface RunRequest {
   screenshotMode: "off" | "on" | "only-on-failure";
   videoMode: "off" | "on" | "retain-on-failure";
   traceMode: "off" | "on" | "retain-on-failure";
-  baseUrl: string;
-  apiBaseUrl: string;
+  triggeredBy: string;
+}
+
+export interface StepSummary {
+  keyword: string;
+  text: string;
+}
+
+export interface ScenarioCatalogEntry {
+  uri: string;
+  name: string;
+  line: number;
+  tags: string[];
+  steps: StepSummary[];
+}
+
+export interface VisualDebugRequest {
+  environment: string;
+  scenarioUri: string;
+  scenarioLine: number;
   triggeredBy: string;
 }
 
