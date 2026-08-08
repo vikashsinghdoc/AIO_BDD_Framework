@@ -1,0 +1,40 @@
+---
+I need a structured discovery report on this repo (graphite-observer-ai), specifically
+graphite-observer-suite (the test framework) and how the agents interact with it. Please
+answer each numbered section separately and concisely — code excerpts where useful, but
+summarize large files rather than pasting them in full.
+
+1. AGENTS.md — what does it actually instruct? Specifically: what is the agent allowed
+   to reference when writing a test (actions, selectors)? Does it describe a fixed schema
+   for the YAML testcases? Is there a specific tool/framework driving the agent itself
+   (e.g. an LLM with this file as a system prompt, a LangChain/CrewAI/AutoGen setup, a
+   custom script)? Where does the agent actually run — locally, in CI, on a schedule?
+
+2. action-inventory.json — what is its structure? Is it a registry of available actions,
+   available selectors, or both? Paste its top-level shape (keys + one or two full
+   entries as examples), not the whole file if it's large.
+
+3. The full set of distinct `action:` values used across every file under
+   src/main/resources/testcases/**/*.yml — just the unique list (e.g. via
+   `grep -rhoP 'action:\s*\K\S+' src/main/resources/testcases | sort -u`). For any
+   action NOT already shown to me (waitForSelector, click, select, setDateRange), give
+   one short real usage example from the YAML.
+
+4. The `_login` include target (or whatever the `include:` directive resolves to) —
+   where does it live, and what does it contain? How does `include:` work mechanically
+   (is it resolved by server.js at runtime, or pre-processed)?
+
+5. server.js — what does it actually do? Specifically: does it use Playwright (or
+   something else) under the hood? How does it read/interpret the YAML testcases? What
+   does it produce when a run finishes (a report file, console output, a database write,
+   something else)? Does anything else in this repo or graphite-observability-service
+   consume that output?
+
+6. Scale: roughly how many testcase YAML files exist today, across how many suite
+   folders (like gc2)?
+
+7. .github/workflows — which workflow(s) trigger test execution today, and what do they
+   actually invoke (server.js directly? a wrapper script? something in /scripts)?
+
+8. Is there any existing Playwright, Cucumber, or Gherkin anywhere in this workspace
+   already (even unused/experimental), in graphite-observer-suite or elsewhere?is there
