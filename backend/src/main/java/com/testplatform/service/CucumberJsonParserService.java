@@ -73,32 +73,55 @@ public class CucumberJsonParserService {
 
                     JsonNode steps = element.path("steps");
                     for (JsonNode stepNode : steps) {
+                        String stepName = text(stepNode, "name");
+                        // Cucumber's synthetic Before/After hook entries have no name. Their
+                        // status still counts toward the scenario's overall worst-status
+                        // below (that's how a failed After hook fails the scenario), but they
+                        // aren't persisted as a step row — otherwise every scenario gets a
+                        // blank-named row (see CLAUDE.md Known Issues).
+                        boolean isSyntheticHook = stepName == null;
+
                         StepResult step = new StepResult();
                         step.setScenario(scenario);
                         step.setKeyword(text(stepNode, "keyword"));
-                        step.setName(text(stepNode, "name"));
+                        step.setName(stepName);
                         step.setOrder(order++);
 
                         JsonNode resultNode = stepNode.path("result");
                         ExecutionStatus stepStatus = ExecutionStatus.fromCucumber(text(resultNode, "status"));
-                        step.setStatus(stepStatus);
+                        String errorMessage = text(resultNode, "error_message");
 
                         long durationNanos = resultNode.path("duration").isNumber() ? resultNode.path("duration").asLong() : 0;
                         long durationMs = durationNanos / 1_000_000;
                         step.setDurationMs(durationMs);
                         scenarioDuration += durationMs;
 
-                        String errorMessage = text(resultNode, "error_message");
+                        // `Then` steps run via runLoggedAssertion never throw, so Cucumber's
+                        // own status always reads "passed" for them even when the assertion
+                        // failed — that's what lets the scenario keep running its remaining
+                        // steps. The step's own text/plain log attachment is the real source
+                        // of truth for whether it actually failed.
+                        String softFailureLine = findSoftFailureLine(stepNode);
+                        if (softFailureLine != null && stepStatus == ExecutionStatus.PASSED) {
+                            stepStatus = ExecutionStatus.FAILED;
+                            errorMessage = softFailureLine;
+                        }
+
+                        step.setStatus(stepStatus);
                         if (errorMessage != null && !errorMessage.isBlank()) {
                             step.setErrorMessage(errorMessage);
                             errors.append(errorMessage).append("\n");
                         }
 
                         worst = worse(worst, stepStatus);
-                        scenario.getSteps().add(step);
+                        if (!isSyntheticHook) scenario.getSteps().add(step);
 
                         // Screenshots/traces attached via `this.attach(...)` in hooks/steps
-                        // show up as base64 "embeddings" on the owning step.
+                        // show up as base64 "embeddings" on the owning step. hooks.ts
+                        // attaches the on-failure screenshot from inside the `After` hook
+                        // itself, so it lives on this exact synthetic pseudo-step — still
+                        // process embeddings for hook steps even though the step row itself
+                        // isn't persisted, or every failure screenshot silently disappears.
                         for (JsonNode embedding : stepNode.path("embeddings")) {
                             String data = text(embedding, "data");
                             String mimeType = text(embedding, "mime_type");
@@ -137,6 +160,30 @@ public class CucumberJsonParserService {
         }
 
         return result;
+    }
+
+    // engine/src/support/logger.ts's runLoggedAssertion writes a line of the exact
+    // form "... [<scenario>] ERROR FAIL <description> (...ms): <message>" into the
+    // step's text/plain attachment on failure, and never throws. This looks for that
+    // exact marker so a soft-failed step can be reported as failed even though
+    // Cucumber's own JSON says "passed" for it.
+    private String findSoftFailureLine(JsonNode stepNode) {
+        for (JsonNode embedding : stepNode.path("embeddings")) {
+            if (!"text/plain".equals(text(embedding, "mime_type"))) continue;
+            String data = text(embedding, "data");
+            if (data == null) continue;
+            try {
+                String decoded = new String(Base64.getDecoder().decode(data), java.nio.charset.StandardCharsets.UTF_8);
+                for (String line : decoded.split("\n")) {
+                    if (line.contains("] ERROR FAIL ")) {
+                        return line.trim();
+                    }
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Not valid base64 — the main embedding-persistence loop already logs this case.
+            }
+        }
+        return null;
     }
 
     private String extractTags(JsonNode element) {

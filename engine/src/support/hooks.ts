@@ -35,7 +35,7 @@ Before(async function (this: TestWorld, scenario) {
 });
 
 After(async function (this: TestWorld, scenario) {
-  const failed = scenario.result?.status === Status.FAILED;
+  const failed = scenario.result?.status === Status.FAILED || this.softFailures.length > 0;
   const featureName = scenario.gherkinDocument.feature?.name ?? "feature";
   const artifactStem = `${artifactSlug(featureName)}--${artifactSlug(scenario.pickle.name)}--worker-${workerId}--run-${++scenarioSequence}`;
   const page = this.page;
@@ -74,6 +74,29 @@ After(async function (this: TestWorld, scenario) {
         await rm(generatedPath, { force: true });
       }
     }
+  }
+
+  // Safety net for openContext/useContext: the capture/cleanup above only ever
+  // touches whichever context was active when the scenario ended. Any additional
+  // named contexts opened via "I open a new browser context as ..." — and the
+  // original scenario context, if the scenario switched away from it and never
+  // switched back — are closed here best-effort (no artifact capture for them,
+  // just avoiding leaked browser contexts/tracing sessions).
+  const extraContexts = [...this.namedContexts.values(), this.defaultContext].filter(
+    (candidate): candidate is NonNullable<typeof candidate> => candidate != null && candidate.context !== context
+  );
+  for (const extra of extraContexts) {
+    if (config.browser.trace !== "off") await extra.context.tracing.stop().catch(() => undefined);
+    await extra.context.close().catch(() => undefined);
+  }
+  this.namedContexts.clear();
+
+  // Assertion steps (runLoggedAssertion) never throw, so Cucumber's own step results
+  // never reflect a soft failure — nothing else will fail this scenario. Per-step
+  // detail already lives in each failed assertion's own log/attachment; this is only
+  // what flips the scenario's overall status.
+  if (this.softFailures.length > 0) {
+    throw new Error(`${this.softFailures.length} soft assertion(s) failed.`);
   }
 });
 
