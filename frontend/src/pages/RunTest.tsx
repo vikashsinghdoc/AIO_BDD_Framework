@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { RunRequest, RunSummary } from "../types";
@@ -9,6 +9,8 @@ import { Field, Select, Toggle, NumberInput } from "../components/FormControls";
 import LogConsole from "../components/LogConsole";
 import MiniStat from "../components/MiniStat";
 import { StatusBadge } from "../components/StatusBadge";
+import TestTicker from "../components/TestTicker";
+import { gsap, useGSAP } from "../lib/gsap";
 
 const DEFAULTS: RunRequest = {
   environment: "",
@@ -55,6 +57,22 @@ export default function RunTest() {
   const [vdError, setVdError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      // fromTo(), not from() — see Dashboard.tsx for why: from()'s implicit
+      // end-state capture breaks under React 18 StrictMode's double-effect-invoke.
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .fromTo(".rt-eyebrow", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.5 })
+        .fromTo(".rt-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7 }, "-=0.35")
+        .fromTo(".rt-subtitle", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.6 }, "-=0.45")
+        .fromTo(".rt-mode-card", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.1 }, "-=0.3")
+        .fromTo(".rt-panel", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 }, "-=0.3");
+    },
+    { scope: containerRef }
+  );
 
   function update<K extends keyof RunRequest>(key: K, value: RunRequest[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -122,36 +140,46 @@ export default function RunTest() {
   const canStartVisualDebug = vdEnvironment !== "" && vdScenario !== null && !vdTriggering;
 
   return (
-    <div className="p-8">
-      <header className="mb-6">
-        <p className="eyebrow mb-1.5">launch</p>
-        <h1 className="text-[26px] font-semibold">Run Tests</h1>
-        <p className="text-ink-muted text-[13.5px] mt-1">
+    <div ref={containerRef} className="relative p-8">
+      <header className="mb-7 relative">
+        <p className="eyebrow rt-eyebrow mb-2">launch</p>
+        <h1 className="rt-title text-[56px] md:text-[68px] leading-[0.95] font-display font-bold uppercase tracking-tight text-gradient-aurora animate-auroraDrift">
+          Run Tests
+        </h1>
+        <p className="rt-subtitle text-ink-muted text-[13.5px] mt-3">
           Choose an execution mode, then configure and trigger the Playwright + Cucumber engine.
         </p>
       </header>
 
-      <div className="mb-7">
+      <div className="section-divider mb-7 relative" />
+
+      <div className="mb-7 relative">
         <p className="eyebrow mb-2.5">Execution mode</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
-          <ModeCard
-            active={mode === "standard"}
-            title="Standard Execution"
-            description="Run suites and multiple scenarios using parallel execution."
-            onClick={() => setMode("standard")}
-          />
-          <ModeCard
-            active={mode === "visual-debug"}
-            title="Visual Debug"
-            description="Run one scenario in its own session for focused, step-by-step investigation."
-            onClick={() => setMode("visual-debug")}
-          />
+          <div className="rt-mode-card">
+            <ModeCard
+              active={mode === "standard"}
+              title="Standard Execution"
+              description="Run suites and multiple scenarios using parallel execution."
+              onClick={() => setMode("standard")}
+            />
+          </div>
+          <div className="rt-mode-card">
+            <ModeCard
+              active={mode === "visual-debug"}
+              title="Visual Debug"
+              description="Run one scenario in its own session for focused, step-by-step investigation."
+              onClick={() => setMode("visual-debug")}
+            />
+          </div>
         </div>
       </div>
 
+      <div className="section-divider mb-7 relative" />
+
       {mode === "standard" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5">
-          <div className="glass-panel p-5 flex flex-col gap-6 h-fit">
+        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 relative">
+          <div className="rt-panel glass-panel-hero p-5 flex flex-col gap-6 h-fit">
             <div className="flex flex-col gap-3">
               <StepLabel index={1} title="Environment" />
               <EnvironmentPicker value={form.environment} onChange={(v) => update("environment", v)} />
@@ -229,7 +257,7 @@ export default function RunTest() {
               <button
                 onClick={handleTrigger}
                 disabled={!canRun}
-                className="flex-1 bg-signal-brand hover:bg-signal-brand2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-signal-brand active:scale-[0.98] transition-[background-color,transform] duration-150 ease-out-strong text-white font-medium text-[13.5px] rounded-lg py-2.5 shadow-glow"
+                className="btn-aurora flex-1 text-[13.5px] py-2.5 shadow-glow"
               >
                 {isLive ? "Running…" : "Run suite"}
               </button>
@@ -249,14 +277,17 @@ export default function RunTest() {
             {runId && (
               <button
                 onClick={() => navigate(`/runs/${runId}`)}
-                className="text-[12px] font-mono text-signal-brand2 hover:text-white text-center"
+                className="text-[12px] font-mono text-aurora-cyan hover:text-white text-center transition-colors"
               >
                 view saved results for run #{runId} →
               </button>
             )}
           </div>
 
-          <div className="flex flex-col gap-4">
+          {/* Live console column stays on plain .glass-panel (no hero glow/motion) —
+              this is the functional, actively-scanned surface, same reasoning as the
+              data-dense pages elsewhere in the app. */}
+          <div className="rt-panel flex flex-col gap-4">
             {summary && (
               <div className="flex flex-wrap items-center gap-2">
                 <SelectionBadge label="env" value={summary.environment} />
@@ -275,6 +306,8 @@ export default function RunTest() {
               </div>
             )}
 
+            {runId && <TestTicker runId={runId} live={isLive} />}
+
             <div className="h-[600px]">
               {runId ? (
                 <LogConsole runId={runId} live={isLive} staticLog={consoleLog} />
@@ -287,8 +320,8 @@ export default function RunTest() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5">
-          <div className="glass-panel p-5 flex flex-col gap-6 h-fit">
+        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 relative">
+          <div className="rt-panel glass-panel-hero p-5 flex flex-col gap-6 h-fit">
             <div className="flex flex-col gap-3">
               <StepLabel index={1} title="Environment" />
               <EnvironmentPicker value={vdEnvironment} onChange={setVdEnvironment} />
@@ -311,7 +344,7 @@ export default function RunTest() {
             <button
               onClick={handleStartVisualDebug}
               disabled={!canStartVisualDebug}
-              className="bg-signal-brand hover:bg-signal-brand2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-signal-brand active:scale-[0.98] transition-[background-color,transform] duration-150 ease-out-strong text-white font-medium text-[13.5px] rounded-lg py-2.5 shadow-glow"
+              className="btn-aurora text-[13.5px] py-2.5 shadow-glow"
             >
               {vdTriggering ? "Starting…" : "Start Visual Debug"}
             </button>
@@ -320,9 +353,9 @@ export default function RunTest() {
             )}
           </div>
 
-          <div className="glass-panel p-8 flex flex-col items-center justify-center text-center min-h-[420px]">
-            <div className="w-11 h-11 rounded-xl bg-signal-brand/10 border border-signal-brand/30 flex items-center justify-center mb-4">
-              <TargetIcon className="w-5 h-5 text-signal-brand2" />
+          <div className="rt-panel glass-panel-hero p-8 flex flex-col items-center justify-center text-center min-h-[420px]">
+            <div className="w-11 h-11 rounded-xl bg-aurora-violet/10 border border-aurora-violet/30 flex items-center justify-center mb-4">
+              <TargetIcon className="w-5 h-5 text-aurora-iris" />
             </div>
             <p className="text-ink-primary text-[14px] font-medium max-w-sm">
               Visual Debug runs exactly one scenario, on its own.
@@ -354,11 +387,15 @@ function ModeCard({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`text-left p-4 rounded-xl border transition-colors duration-150 ease-out-strong ${
-        active ? "bg-signal-brand/10 border-signal-brand" : "border-base-border hover:border-ink-faint"
+      className={`text-left p-4 rounded-xl border transition-[background-color,border-color,transform] duration-150 ease-out-strong hover:-translate-y-0.5 ${
+        active
+          ? "bg-aurora-violet/10 border-aurora-violet shadow-glowCyan"
+          : "border-base-border hover:border-ink-faint"
       }`}
     >
-      <p className={`text-[14px] font-display font-semibold ${active ? "text-white" : "text-ink-primary"}`}>{title}</p>
+      <p className={`text-[14px] font-display font-semibold ${active ? "text-gradient-aurora animate-auroraDrift" : "text-ink-primary"}`}>
+        {title}
+      </p>
       <p className="text-[12px] text-ink-muted mt-1 leading-relaxed">{description}</p>
     </button>
   );
