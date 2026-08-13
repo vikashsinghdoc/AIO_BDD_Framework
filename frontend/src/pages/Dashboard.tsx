@@ -19,7 +19,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="p-8 max-w-[1400px]">
+    <div className="p-8">
       <header className="mb-8">
         <p className="eyebrow mb-1.5">telemetry / overview</p>
         <h1 className="text-[26px] font-semibold">Mission Control</h1>

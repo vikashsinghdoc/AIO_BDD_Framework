@@ -122,7 +122,7 @@ export default function RunTest() {
   const canStartVisualDebug = vdEnvironment !== "" && vdScenario !== null && !vdTriggering;
 
   return (
-    <div className="p-8 max-w-[1500px]">
+    <div className="p-8">
       <header className="mb-6">
         <p className="eyebrow mb-1.5">launch</p>
         <h1 className="text-[26px] font-semibold">Run Tests</h1>
@@ -275,11 +275,11 @@ export default function RunTest() {
               </div>
             )}
 
-            <div className="min-h-[480px] flex-1">
+            <div className="h-[600px]">
               {runId ? (
                 <LogConsole runId={runId} live={isLive} staticLog={consoleLog} />
               ) : (
-                <div className="glass-panel h-full min-h-[480px] flex items-center justify-center">
+                <div className="glass-panel h-full flex items-center justify-center">
                   <p className="text-ink-faint text-[13px]">Console output will stream here once a run starts.</p>
                 </div>
               )}

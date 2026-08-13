@@ -23,7 +23,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -254,7 +253,7 @@ public class TestRunnerService {
     }
 
     private ProcessBuilder buildProcess(TestRun run, String reportDir) {
-        List<String> command = new ArrayList<>(List.of(engineProperties.getCommand().split("\\s+")));
+        List<String> command = engineProperties.commandTokens();
         if (run.getExecutionMode() != ExecutionMode.VISUAL_DEBUG
                 && run.getTagExpression() != null && !run.getTagExpression().isBlank()) {
             command.add("--tags");

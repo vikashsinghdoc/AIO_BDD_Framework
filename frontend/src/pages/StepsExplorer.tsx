@@ -104,7 +104,7 @@ export default function StepsExplorer() {
   }
 
   return (
-    <div className="p-8 max-w-[1600px]">
+    <div className="p-8">
       <header className="mb-6">
         <p className="eyebrow mb-1.5">complete grid</p>
         <h1 className="text-[26px] font-semibold">Steps Explorer</h1>

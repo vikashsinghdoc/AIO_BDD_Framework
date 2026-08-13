@@ -36,6 +36,13 @@ Before(async function (this: TestWorld, scenario) {
 
 After(async function (this: TestWorld, scenario) {
   const failed = scenario.result?.status === Status.FAILED || this.softFailures.length > 0;
+  // PENDING/SKIPPED (e.g. "I skip the remaining steps if..."/"I stop the scenario if...")
+  // are not failures, but the skip point is exactly where a screenshot is most useful —
+  // "only-on-failure" should still capture it, distinct from `failed` which also drives
+  // video/trace retention and the pass/fail log line below.
+  const nonPassing = failed
+    || scenario.result?.status === Status.PENDING
+    || scenario.result?.status === Status.SKIPPED;
   const featureName = scenario.gherkinDocument.feature?.name ?? "feature";
   const artifactStem = `${artifactSlug(featureName)}--${artifactSlug(scenario.pickle.name)}--worker-${workerId}--run-${++scenarioSequence}`;
   const page = this.page;
@@ -46,7 +53,7 @@ After(async function (this: TestWorld, scenario) {
 
   try {
     const shouldCaptureScreenshot = config.browser.screenshot === "on"
-      || (failed && config.browser.screenshot === "only-on-failure");
+      || (nonPassing && config.browser.screenshot === "only-on-failure");
     if (page && shouldCaptureScreenshot) {
       const screenshot = await page.screenshot({
         path: join(workerResultsDirectory(), `${artifactStem}.png`),
