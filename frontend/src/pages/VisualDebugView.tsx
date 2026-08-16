@@ -143,7 +143,7 @@ export default function VisualDebugView() {
   }
 
   return (
-    <div className="p-8 max-w-[1200px]">
+    <div className="p-8">
       <header className="mb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <p className="eyebrow">visual debug</p>

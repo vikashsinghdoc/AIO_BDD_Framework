@@ -19,5 +19,9 @@ engine/.env
 # OS / IDE
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
+# Shared editor config, tracked despite the blanket ignore above so every clone gets
+# working Cucumber/Gherkin step-definition navigation out of the box.
+!.vscode/settings.json
+!.vscode/extensions.json
 *.log

@@ -59,7 +59,7 @@ public class ScenarioCatalogService {
     }
 
     private void runDryRun() throws Exception {
-        List<String> command = new ArrayList<>(List.of(engineProperties.getCommand().split("\\s+")));
+        List<String> command = engineProperties.commandTokens();
         command.add("--dry-run");
 
         ProcessBuilder builder = new ProcessBuilder(command);

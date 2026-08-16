@@ -1,0 +1,9 @@
+{
+    "java.compile.nullAnalysis.mode": "disabled",
+    "cucumberautocomplete.steps": [
+        "engine/src/steps/*.steps.ts"
+    ],
+    "cucumberautocomplete.syncfeatures": "engine/features/**/*.feature",
+    "cucumberautocomplete.strictGherkinCompletion": false,
+    "cucumberautocomplete.strictGherkinValidation": false
+}

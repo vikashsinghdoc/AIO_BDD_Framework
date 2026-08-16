@@ -53,7 +53,7 @@ export default function RunDetailPage() {
   const isLive = summary.status === "RUNNING" || summary.status === "QUEUED";
 
   return (
-    <div className="p-8 max-w-[1500px]">
+    <div className="p-8">
       <header className="mb-6">
         <p className="eyebrow mb-1.5">run detail</p>
         <div className="flex items-center gap-3 flex-wrap">
