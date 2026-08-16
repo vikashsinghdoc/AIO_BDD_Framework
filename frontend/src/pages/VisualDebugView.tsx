@@ -5,6 +5,7 @@ import { parseLine } from "../lib/logLine";
 import type { RunSummary, ScenarioCatalogEntry, StepSummary } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
 import LogConsole from "../components/LogConsole";
+import { gsap, useGSAP } from "../lib/gsap";
 
 type StepState = "pending" | "running" | "passed" | "failed";
 
@@ -48,6 +49,10 @@ export default function VisualDebugView() {
   const [scenario, setScenario] = useState<ScenarioCatalogEntry | null>(null);
   const [steps, setSteps] = useState<ChecklistStep[]>([]);
   const stepIndexRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // See Dashboard.tsx — flips once on first load; useGSAP depends on this, not
+  // `summary`, since summary gets a new reference on every 3s poll while live.
+  const [ready, setReady] = useState(false);
 
   const isLive = summary?.status === "RUNNING" || summary?.status === "QUEUED";
 
@@ -56,8 +61,20 @@ export default function VisualDebugView() {
     api.getRun(runId).then((detail) => {
       setSummary(detail.summary);
       setConsoleLog(detail.consoleLog);
+      setReady(true);
     });
   }, [runId]);
+
+  useGSAP(
+    () => {
+      if (!ready) return;
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .fromTo(".vd-eyebrow", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.5 })
+        .fromTo(".vd-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 }, "-=0.35");
+    },
+    { dependencies: [ready], scope: containerRef }
+  );
 
   // Same reasoning as RunTest.tsx: capture consoleLog alongside summary on every poll
   // so that once isLive flips to false, LogConsole already has staticLog to fall back
@@ -136,29 +153,33 @@ export default function VisualDebugView() {
 
   if (!summary) {
     return (
-      <div className="p-8">
+      <div ref={containerRef} className="p-8">
         <p className="text-ink-faint text-[13px]">Loading Visual Debug session #{runId}…</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div ref={containerRef} className="p-8">
       <header className="mb-6">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="vd-eyebrow flex items-center gap-3 flex-wrap">
           <p className="eyebrow">visual debug</p>
           {isLive && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-signal-fail/10 border border-signal-fail/30 text-signal-fail text-[10.5px] font-mono uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-aurora-violet/10 border border-aurora-violet/30 text-aurora-iris text-[10.5px] font-mono uppercase tracking-wider">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-signal-fail opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-signal-fail" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-aurora-violet opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-aurora-violet" />
               </span>
               live debug
             </span>
           )}
         </div>
-        <h1 className="text-[24px] font-semibold mt-1.5">{scenario?.name ?? "Scenario"}</h1>
+        <h1 className="vd-title text-[32px] md:text-[38px] leading-tight font-display font-bold text-gradient-aurora mt-2">
+          {scenario?.name ?? "Scenario"}
+        </h1>
       </header>
+
+      <div className="section-divider mb-6" />
 
       <div className="glass-panel p-4 mb-5 flex flex-wrap items-center gap-x-8 gap-y-2 text-[13px]">
         <Field label="Environment" value={summary.environment} />
@@ -201,7 +222,7 @@ export default function VisualDebugView() {
           </div>
           <Link
             to={`/runs/${runId}`}
-            className="text-[12.5px] font-mono text-signal-brand2 hover:text-white transition-colors duration-150"
+            className="text-[12.5px] font-mono text-aurora-cyan hover:text-white transition-colors duration-150"
           >
             view full run detail →
           </Link>
@@ -234,7 +255,7 @@ function StepRow({ step }: { step: ChecklistStep }) {
     ) : step.state === "failed" ? (
       <span className="text-signal-fail">✕</span>
     ) : step.state === "running" ? (
-      <span className="text-signal-brand2 animate-pulse">●</span>
+      <span className="text-aurora-iris animate-pulse">●</span>
     ) : (
       <span className="text-ink-faint">○</span>
     );

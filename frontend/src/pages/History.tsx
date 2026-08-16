@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { RunStatus, RunSummary } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
 import { Select, TextInput } from "../components/FormControls";
 import { format } from "date-fns";
+import { gsap, useGSAP } from "../lib/gsap";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -23,6 +24,21 @@ export default function History() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Header-only entrance — the theme evolution applies everywhere, but this page
+  // stays dense/functional (per agreed scope): no 3D background, no motion on
+  // the table itself, just the same bold heading treatment as the pilot pages.
+  useGSAP(
+    () => {
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .fromTo(".hist-eyebrow", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.5 })
+        .fromTo(".hist-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 }, "-=0.35")
+        .fromTo(".hist-subtitle", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.4");
+    },
+    { scope: containerRef }
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -36,14 +52,18 @@ export default function History() {
   }, [status, tag, page]);
 
   return (
-    <div className="p-8">
+    <div ref={containerRef} className="p-8">
       <header className="mb-6">
-        <p className="eyebrow mb-1.5">archive</p>
-        <h1 className="text-[26px] font-semibold">Run History</h1>
-        <p className="text-ink-muted text-[13.5px] mt-1">
+        <p className="eyebrow hist-eyebrow mb-2">archive</p>
+        <h1 className="hist-title text-[48px] md:text-[56px] leading-[0.95] font-display font-bold uppercase tracking-tight text-gradient-aurora">
+          Run History
+        </h1>
+        <p className="hist-subtitle text-ink-muted text-[13.5px] mt-3">
           Every run ever triggered, persisted in Postgres with full scenario/step detail and screenshots.
         </p>
       </header>
+
+      <div className="section-divider mb-6" />
 
       <div className="flex gap-3 mb-5 max-w-lg">
         <div className="w-52">
@@ -79,12 +99,12 @@ export default function History() {
             {runs.map((run) => (
               <tr key={run.id} className="hover:bg-base-surface2/50 transition-colors">
                 <td className="px-5 py-3.5">
-                  <Link to={`/runs/${run.id}`} className="font-mono text-signal-brand2 hover:text-white">
+                  <Link to={`/runs/${run.id}`} className="font-mono text-aurora-iris hover:text-white transition-colors">
                     #{run.id}
                   </Link>
                 </td>
                 <td className="px-5 py-3.5"><StatusBadge status={run.status} /></td>
-                <td className="px-5 py-3.5 font-mono text-signal-brand2 text-[12px]">{run.environment}</td>
+                <td className="px-5 py-3.5 font-mono text-aurora-iris text-[12px]">{run.environment}</td>
                 <td className="px-5 py-3.5 font-mono text-ink-muted text-[12px]">{run.tagExpression ?? "all"}</td>
                 <td className="px-5 py-3.5 text-ink-muted capitalize">{run.browser}</td>
                 <td className="px-5 py-3.5 font-mono text-[12px]">

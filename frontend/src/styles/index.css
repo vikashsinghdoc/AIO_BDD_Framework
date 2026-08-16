@@ -69,4 +69,94 @@
   .eyebrow {
     @apply text-[11px] font-mono uppercase tracking-[0.18em] text-ink-faint;
   }
+
+  /* Hero-only surface for the pilot pages (Dashboard, Run Tests) — a stronger,
+     brighter relative of .glass-panel. Not used on data-dense pages: those stay
+     on the plain .glass-panel per the "keep dense pages functional" scope.
+     The gradient ring (::before) is a masked-padding trick — an animated
+     violet→magenta→cyan border a plain `border` color can't do. */
+  .glass-panel-hero {
+    @apply bg-base-surface/60 border border-transparent rounded-2xl backdrop-blur-md shadow-glowAurora relative;
+    background-clip: padding-box;
+  }
+  .glass-panel-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(115deg, #7C5CFF, #FF6BCB, #2FE6E0, #7C5CFF);
+    background-size: 300% 300%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    pointer-events: none;
+    animation: auroraDrift 8s ease-in-out infinite;
+  }
+  .glass-panel-hero:hover::before {
+    opacity: 0.8;
+  }
+
+  /* Violet → magenta → cyan text gradient, reserved for hero headings on the
+     pilot pages. Paired with animate-auroraDrift for a slow, continuous shift. */
+  .text-gradient-aurora {
+    background-image: linear-gradient(90deg, #C4B5FD 0%, #A78BFA 25%, #7C5CFF 45%, #FF6BCB 70%, #2FE6E0 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Gradient CTA — the primary action per view (Run button). Sheen sweep only
+     on hover, not looping at rest, so it stays a deliberate accent rather than
+     visual noise competing with the live console next to it. */
+  .btn-aurora {
+    @apply relative overflow-hidden text-white font-medium rounded-lg transition-transform duration-150 ease-out-strong active:scale-[0.98];
+    background-image: linear-gradient(115deg, #7C5CFF 0%, #9B5CFF 45%, #2FE6E0 100%);
+    background-size: 200% 100%;
+    background-position: 0% 50%;
+    transition: background-position 0.4s ease-out-strong, transform 0.15s ease-out-strong;
+  }
+  .btn-aurora:hover:not(:disabled) {
+    background-position: 100% 50%;
+  }
+  .btn-aurora::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(115deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: translateX(-120%) skewX(-15deg);
+    pointer-events: none;
+  }
+  .btn-aurora:hover:not(:disabled)::after {
+    animation: sheen 0.9s ease-out-strong;
+  }
+  .btn-aurora:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  /* Thin gradient rule marking a hard section break on the pilot pages — the
+     "sharper contrast between sections" half of the theme evolution. Fades at
+     both ends rather than running edge-to-edge, so it reads as a mark, not a box. */
+  .section-divider {
+    height: 1px;
+    background-image: linear-gradient(90deg, transparent, rgba(124,92,255,0.4) 15%, rgba(47,230,224,0.4) 85%, transparent);
+  }
+
+  /* Live status ticker — a news-ticker-style marquee for the "technical
+     animations while a run is executing" request. Two identical tracks side by
+     side, animated to -50%, gives a seamless loop regardless of item count. */
+  .ticker-viewport {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .ticker-track {
+    animation: marquee 22s linear infinite;
+  }
+  .ticker-viewport:hover .ticker-track {
+    animation-play-state: paused;
+  }
 }

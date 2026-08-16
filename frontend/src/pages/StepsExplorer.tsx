@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { AttachmentDto, ExecutionStatus, RunStatus, StepDetailRow } from "../types";
 import { StepStatusBadge, StatusBadge } from "../components/StatusBadge";
 import { Select, TextInput, Toggle } from "../components/FormControls";
 import { format } from "date-fns";
+import { gsap, useGSAP } from "../lib/gsap";
 
 const RUN_STATUS_OPTIONS = [
   { value: "", label: "Any run status" },
@@ -57,6 +58,18 @@ export default function StepsExplorer() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [attachmentsByScenario, setAttachmentsByScenario] = useState<Record<number, AttachmentDto[]>>({});
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .fromTo(".exp-eyebrow", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.5 })
+        .fromTo(".exp-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 }, "-=0.35")
+        .fromTo(".exp-subtitle", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.4");
+    },
+    { scope: containerRef }
+  );
 
   function load() {
     setLoading(true);
@@ -104,16 +117,20 @@ export default function StepsExplorer() {
   }
 
   return (
-    <div className="p-8">
+    <div ref={containerRef} className="p-8">
       <header className="mb-6">
-        <p className="eyebrow mb-1.5">complete grid</p>
-        <h1 className="text-[26px] font-semibold">Steps Explorer</h1>
-        <p className="text-ink-muted text-[13.5px] mt-1">
+        <p className="eyebrow exp-eyebrow mb-2">complete grid</p>
+        <h1 className="exp-title text-[48px] md:text-[56px] leading-[0.95] font-display font-bold uppercase tracking-tight text-gradient-aurora">
+          Steps Explorer
+        </h1>
+        <p className="exp-subtitle text-ink-muted text-[13.5px] mt-3">
           Every step from every scenario, across every run ever recorded — filter by any
           combination of run/scenario/step status, feature, tag, or browser, and drill into
           the full error and screenshots inline.
         </p>
       </header>
+
+      <div className="section-divider mb-6" />
 
       <div className="glass-panel p-4 mb-5 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
         <Select value={runStatus} onChange={resetToFirstPage(setRunStatus)} options={RUN_STATUS_OPTIONS} />
@@ -157,7 +174,7 @@ export default function StepsExplorer() {
                       <Link
                         to={`/runs/${row.runId}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="font-mono text-signal-brand2 hover:text-white"
+                        className="font-mono text-aurora-iris hover:text-white transition-colors"
                       >
                         #{row.runId}
                       </Link>
@@ -177,7 +194,7 @@ export default function StepsExplorer() {
                     <td className="px-4 py-3 font-mono text-ink-muted">
                       {row.stepDurationMs != null ? `${row.stepDurationMs}ms` : "—"}
                     </td>
-                    <td className="px-4 py-3 font-mono text-signal-brand2 text-[11px]">
+                    <td className="px-4 py-3 font-mono text-aurora-iris text-[11px]">
                       {row.scenarioTags.slice(0, 2).join(" ")}
                     </td>
                     <td className="px-4 py-3 text-ink-muted whitespace-nowrap">
@@ -203,7 +220,7 @@ export default function StepsExplorer() {
                                   key={a.id}
                                   src={api.attachmentUrl(a.id)}
                                   alt="scenario attachment"
-                                  className="w-24 h-16 object-cover rounded-md border border-base-border hover:border-signal-brand/60 transition-colors cursor-pointer"
+                                  className="w-24 h-16 object-cover rounded-md border border-base-border hover:border-aurora-cyan/60 transition-colors cursor-pointer"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setLightbox(a.id);

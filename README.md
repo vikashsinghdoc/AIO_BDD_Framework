@@ -202,6 +202,14 @@ Two small, backwards-compatible tweaks in `engine/`:
 Everything else — hooks, steps, locators, world — is untouched. `npm test`, `npm run test:ui`,
 etc. still work exactly as before if you run the engine standalone.
 
+## Onboarding this framework to your org
+
+Adopting this outside its original org — different package registry, different database, need
+auth on the API/UI, migrating tests from an existing framework, or want to pull in reusable test
+helpers from another project? Four Copilot agents in `.github/agents/` handle that, each scoped
+to one job and never committing/pushing on its own. Start with `@onboarding` in Copilot Chat —
+see `.github/agents/README.md` for what each of the four does and the order to run them in.
+
 ## Notes on what's intentionally out of scope for v1
 
 - **Auth** — there's no login; add Spring Security in front of `/api/**` before exposing this

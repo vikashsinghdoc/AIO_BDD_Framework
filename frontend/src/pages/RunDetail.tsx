@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { RunDetail } from "../types";
@@ -6,8 +6,10 @@ import { StatusBadge } from "../components/StatusBadge";
 import ScenarioGrid from "../components/ScenarioGrid";
 import LogConsole from "../components/LogConsole";
 import MiniStat from "../components/MiniStat";
+import TestTicker from "../components/TestTicker";
 import { Select, TextInput } from "../components/FormControls";
 import { format } from "date-fns";
+import { gsap, useGSAP } from "../lib/gsap";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -26,11 +28,19 @@ export default function RunDetailPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Flips once, first load — see Dashboard.tsx for why useGSAP must depend on
+  // this rather than `detail` (which gets a new reference on every 4s poll of a
+  // running run, which would otherwise re-fire and kill the entrance mid-flight).
+  const [ready, setReady] = useState(false);
 
   function load() {
     api
       .getRun(runId, { status: statusFilter || undefined, tag: tagFilter || undefined, search: search || undefined })
-      .then(setDetail);
+      .then((data) => {
+        setDetail(data);
+        setReady(true);
+      });
   }
 
   useEffect(() => {
@@ -45,27 +55,46 @@ export default function RunDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail?.summary.status]);
 
+  useGSAP(
+    () => {
+      if (!ready) return;
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .fromTo(".rd-eyebrow", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.5 })
+        .fromTo(".rd-title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 }, "-=0.35");
+    },
+    { dependencies: [ready], scope: containerRef }
+  );
+
   if (!detail) {
-    return <div className="p-8"><p className="text-ink-faint text-[13px]">Loading run #{runId}…</p></div>;
+    return (
+      <div ref={containerRef} className="p-8">
+        <p className="text-ink-faint text-[13px]">Loading run #{runId}…</p>
+      </div>
+    );
   }
 
   const { summary } = detail;
   const isLive = summary.status === "RUNNING" || summary.status === "QUEUED";
 
   return (
-    <div className="p-8">
+    <div ref={containerRef} className="p-8">
       <header className="mb-6">
-        <p className="eyebrow mb-1.5">run detail</p>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-[26px] font-semibold">Run #{summary.id}</h1>
+        <p className="eyebrow rd-eyebrow mb-2">run detail</p>
+        <div className="rd-title flex items-center gap-4 flex-wrap">
+          <h1 className="text-[40px] md:text-[48px] leading-[0.95] font-display font-bold uppercase tracking-tight text-gradient-aurora">
+            Run #{summary.id}
+          </h1>
           <StatusBadge status={summary.status} pulse />
         </div>
-        <p className="text-ink-muted text-[13px] mt-1.5 font-mono">
+        <p className="text-ink-muted text-[13px] mt-3 font-mono">
           {summary.environment} · {summary.tagExpression ?? "all scenarios"} · {summary.browser} · {summary.headless ? "headless" : "headed"} · {summary.parallelWorkers} worker(s)
           {" · "}
           {format(new Date(summary.startedAt), "MMM d, yyyy HH:mm:ss")}
         </p>
       </header>
+
+      <div className="section-divider mb-6" />
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         <MiniStat label="total" value={summary.totalScenarios} />
@@ -74,6 +103,12 @@ export default function RunDetailPage() {
         <MiniStat label="skipped" value={summary.skippedScenarios} accent="pending" />
         <MiniStat label="duration" value={summary.durationMs ? `${(summary.durationMs / 1000).toFixed(1)}s` : "—"} />
       </div>
+
+      {isLive && (
+        <div className="mb-6">
+          <TestTicker runId={summary.id} live={isLive} />
+        </div>
+      )}
 
       {detail.failureReason && (
         <div className="glass-panel border-l-[3px] border-l-signal-fail p-4 mb-6">
@@ -120,7 +155,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     <button
       onClick={onClick}
       className={`px-4 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
-        active ? "border-signal-brand text-white" : "border-transparent text-ink-muted hover:text-ink-primary"
+        active ? "border-aurora-violet text-white" : "border-transparent text-ink-muted hover:text-ink-primary"
       }`}
     >
       {children}
